@@ -1,0 +1,16 @@
+databases:
+  oracle:
+    connection-string:
+      jdbc-thin:
+        template: "jdbc:oracle:thin:@//%s:%d/%s"
+        port: 49125
+      ldap:
+        template: "ldap://%s:%d/%s,%s"
+        servers: "oid1puser.someplace.com,oid2puser.someplace.com,oid3puser.someplace.com"
+        context: "cn=oracleContext,dc=somecompany,dc=com"
+        port: 389
+  h2:
+    connection-string:
+      jdbc-thin:
+        template: "jdbc:h2:%s;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE"
+        port: 0

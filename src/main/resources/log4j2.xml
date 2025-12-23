@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="WARN">
+    <Appenders>
+        <Console name="Console" target="SYSTEM_ERR">
+            <PatternLayout pattern="%msg%n" />
+            <Filters>
+                <ThresholdFilter level="error" onMatch="ACCEPT" onMismatch="DENY" />
+            </Filters>
+        </Console>
+        <File name="File" fileName="logs/app.log">
+            <JsonLayout compact="true" eventEol="true" />
+        </File>
+    </Appenders>
+    <Loggers>
+        <Logger name="com.company.app.service" level="DEBUG" additivity="false">
+            <AppenderRef ref="File" />
+        </Logger>
+
+        <Logger name="com.company.app.service.util.LoggingUtils" level="ERROR" additivity="false">
+            <AppenderRef ref="Console" />
+            <AppenderRef ref="File" />
+        </Logger>
+        <Root level="info">
+            <AppenderRef ref="File" />
+        </Root>
+    </Loggers>
+</Configuration>

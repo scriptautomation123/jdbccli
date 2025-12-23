@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ruleset xmlns="http://maven.apache.org/plugins/maven-versions-plugin/rule/2.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    comparisonMethod="maven">
+    <ignoreVersions>
+        <!-- Ignore Alpha's, Beta's, release candidates and milestones -->
+        <ignoreVersion type="regex">(?i).*Alpha(?:-?\d+)?</ignoreVersion>
+        <ignoreVersion type="regex">(?i).*a(?:-?\d+)?</ignoreVersion>
+        <ignoreVersion type="regex">(?i).*Alpha(?:-?\d+)?</ignoreVersion>
+        <ignoreVersion type="regex">(?i).*-b(?:-?\d+)?</ignoreVersion>
+        <ignoreVersion type="regex">(?i).*Beta(?:-?\d+)?</ignoreVersion>
+        <ignoreVersion type="regex">(?i).*-B(?:-?\d+)?</ignoreVersion>
+        <ignoreVersion type="regex">(?i).*RC(?:-?\d+)?</ignoreVersion>
+        <ignoreVersion type="regex">(?i).*CR(?:-?\d+)?</ignoreVersion>
+        <ignoreVersion type="regex">(?i).*M(?:-?\d+)?</ignoreVersion>
+
+        <!-- Ignore SNAPSHOT versions -->
+        <ignoreVersion type="regex">(?i).*-SNAPSHOT</ignoreVersion>
+
+        <!-- Ignore specific problematic versions -->
+        <ignoreVersion type="regex">(?i).*incubating</ignoreVersion>
+        <ignoreVersion type="regex">(?i).*preview</ignoreVersion>
+        <ignoreVersion type="regex">(?i).*experimental</ignoreVersion>
+        <ignoreVersion type="regex">(?i).*nightly</ignoreVersion>
+        <ignoreVersion type="regex">(?i).*dev</ignoreVersion>
+        <ignoreVersion type="regex">(?i).*build</ignoreVersion>
+
+        <!-- Ignore versions with specific suffixes -->
+        <ignoreVersion type="regex">(?i).*-ea(?:-?\d+)?</ignoreVersion>
+        <ignoreVersion type="regex">(?i).*-early-access(?:-?\d+)?</ignoreVersion>
+        <ignoreVersion type="regex">(?i).*-pre(?:-?\d+)?</ignoreVersion>
+        <ignoreVersion type="regex">(?i).*-prerelease(?:-?\d+)?</ignoreVersion>
+    </ignoreVersions>
+</ruleset> 
