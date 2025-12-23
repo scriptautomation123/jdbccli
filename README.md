@@ -1,29 +1,4 @@
 
-git clone git@scriptautomation123:scriptautomation123/jdbccli.git
-
-
-# setup
-need to use 
-
-git clone git@scriptautomation123:scriptautomation123/jdbccli.git
-
-./setup-ssh-git.sh
-
-imaging you have 2 github accounts scriptautomation123 and swapan-datahawklab
-
-cd ~/scriptautomation123 &&\
-git clone git@scriptautomation123:scriptautomation123/jets4best.git
-
-cd ~/swapan-datahawklab &&\
-git clone git@swapan-datahawklab:swapan-datahawklab/somerepo.git
-
-
-
-scriptautomation123/setup
-
-
-
-
 
 ### Resolving GitHub Email Privacy Issues
 
