@@ -101,7 +101,7 @@ public final class DatabaseConnectionManager {
     // Generate connection string
     final String connectionUrl = ConnectionStringGenerator
         .createConnectionString(config.type(), config.database(), config.user(), config.password(), config.host())
-        .getUrl();
+        .url();
 
     LoggingUtils.logDatabaseConnection(config.type(), config.database(), config.user());
 
