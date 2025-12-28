@@ -3,7 +3,7 @@ package com.company.app.service;
 import com.company.app.service.auth.PasswordResolver;
 import com.company.app.service.cli.BaseDatabaseCliCommand;
 import com.company.app.service.service.ExecutionResult;
-import com.company.app.service.service.ProcedureExcecutorService;
+import com.company.app.service.service.ProcedureExecutorService;
 import com.company.app.service.service.ProcedureRequest;
 import com.company.app.service.util.ExceptionUtils;
 
@@ -39,8 +39,8 @@ public class ExecProcedureCmd extends BaseDatabaseCliCommand {
     super(createService());
   }
 
-  private static ProcedureExcecutorService createService() {
-    return new ProcedureExcecutorService(
+  private static ProcedureExecutorService createService() {
+    return new ProcedureExecutorService(
         new PasswordResolver(() -> new String(System.console().readPassword("Enter password: "))));
   }
 

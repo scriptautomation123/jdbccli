@@ -57,10 +57,10 @@ public abstract class AbstractDatabaseExecutionService {
       final PasswordRequest passwordRequest = new PasswordRequest(
           request.getUser(),
           request.getDatabase(),
-          request.getVaultConfig().getVaultUrl(),
-          request.getVaultConfig().getRoleId(),
-          request.getVaultConfig().getSecretId(),
-          request.getVaultConfig().getAit());
+          request.getVaultConfig().vaultUrl(),
+          request.getVaultConfig().roleId(),
+          request.getVaultConfig().secretId(),
+          request.getVaultConfig().ait());
 
       return passwordResolver.resolvePassword(passwordRequest);
 
