@@ -1,13 +1,12 @@
 package com.company.app.service.service;
 
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.Optional;
 
 import com.company.app.service.auth.PasswordRequest;
 import com.company.app.service.auth.PasswordResolver;
-import com.company.app.service.database.ConnectionStringGenerator;
+import com.company.app.service.database.DatabaseConnectionManager;
 import com.company.app.service.util.ExceptionUtils;
 import com.company.app.service.util.LoggingUtils;
 
@@ -16,6 +15,7 @@ import com.company.app.service.util.LoggingUtils;
  * functionality
  * for password resolution, connection management, and execution orchestration.
  * Implements template method pattern for database operations.
+ * Now uses DatabaseConnectionManager for centralized connection handling.
  */
 public abstract class AbstractDatabaseExecutionService {
 
@@ -77,6 +77,7 @@ public abstract class AbstractDatabaseExecutionService {
 
   /**
    * Creates a database connection using request parameters.
+   * Now uses DatabaseConnectionManager for centralized connection handling.
    * 
    * @param request  database request containing connection parameters
    * @param password resolved password for authentication
@@ -85,11 +86,13 @@ public abstract class AbstractDatabaseExecutionService {
    */
   protected Connection createConnection(final DatabaseRequest request, final String password)
       throws SQLException {
-    return createConnection(request.getType(), request.getDatabase(), request.getUser(), password);
+    return DatabaseConnectionManager.createConnection(
+        request.getType(), request.getDatabase(), request.getUser(), password);
   }
 
   /**
    * Creates a database connection with explicit parameters.
+   * Now uses DatabaseConnectionManager for centralized connection handling.
    * 
    * @param type     database type (e.g., "oracle", "postgresql")
    * @param database database name
@@ -101,87 +104,7 @@ public abstract class AbstractDatabaseExecutionService {
   protected Connection createConnection(final String type, final String database, final String user,
       final String password)
       throws SQLException {
-    validateConnectionParameters(type, database, user, password);
-
-    final String connectionUrl = ConnectionStringGenerator
-        .createConnectionString(type, database, user, password, null)
-        .getUrl();
-
-    LoggingUtils.logDatabaseConnection(type, database, user);
-
-    try {
-      final Connection conn = DriverManager.getConnection(connectionUrl, user, password);
-      LoggingUtils.logStructuredError(
-          DATABASE_CONNECTION, "create", "SUCCESS", "Successfully connected to database", null);
-      return conn;
-    } catch (SQLException e) {
-      LoggingUtils.logStructuredError(
-          DATABASE_CONNECTION,
-          "create",
-          FAILED,
-          "Failed to connect to database: " + e.getMessage(),
-          e);
-      throw e;
-    }
-  }
-
-  /**
-   * Validates connection parameters for null or empty values.
-   * 
-   * @param type     database type to validate
-   * @param database database name to validate
-   * @param user     username to validate
-   * @param password password to validate
-   * @throws IllegalArgumentException if any parameter is invalid
-   */
-  private void validateConnectionParameters(final String type, final String database, final String user,
-      final String password) {
-    if (isNullOrBlank(type)) {
-      LoggingUtils.logStructuredError(
-          DATABASE_CONNECTION,
-          VALIDATION,
-          "INVALID_TYPE",
-          "Database type cannot be null or empty",
-          null);
-      throw new IllegalArgumentException("Database type cannot be null or empty");
-    }
-    if (isNullOrBlank(database)) {
-      LoggingUtils.logStructuredError(
-          DATABASE_CONNECTION,
-          VALIDATION,
-          "INVALID_DATABASE",
-          "Database name cannot be null or empty",
-          null);
-      throw new IllegalArgumentException("Database name cannot be null or empty");
-    }
-    if (isNullOrBlank(user)) {
-      LoggingUtils.logStructuredError(
-          DATABASE_CONNECTION,
-          VALIDATION,
-          "INVALID_USER",
-          "Database user cannot be null or empty",
-          null);
-      throw new IllegalArgumentException("Database user cannot be null or empty");
-    }
-    if (password == null) {
-      LoggingUtils.logStructuredError(
-          DATABASE_CONNECTION,
-          VALIDATION,
-          "INVALID_PASSWORD",
-          "Database password cannot be null",
-          null);
-      throw new IllegalArgumentException("Database password cannot be null");
-    }
-  }
-
-  /**
-   * Checks if a string is null or contains only whitespace.
-   * 
-   * @param value string to check
-   * @return true if null or blank
-   */
-  private static boolean isNullOrBlank(final String value) {
-    return value == null || value.trim().isEmpty();
+    return DatabaseConnectionManager.createConnection(type, database, user, password);
   }
 
   /**
