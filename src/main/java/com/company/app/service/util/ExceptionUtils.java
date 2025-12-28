@@ -83,6 +83,7 @@ public final class ExceptionUtils {
 
   /**
    * Handles CLI exceptions with appropriate logging and user-friendly output.
+   * Uses Java 21 pattern matching for cleaner exception type handling.
    * 
    * @param exception   exception to handle
    * @param operation   operation that failed
@@ -91,20 +92,19 @@ public final class ExceptionUtils {
    */
   public static int handleCliException(final Exception exception, final String operation,
       final PrintStream errorStream) {
-    if (exception instanceof SQLException) {
-      return handleCliSQLException((SQLException) exception, operation, errorStream);
-    } else if (exception instanceof ConfigurationException) {
-      return handleCliConfigurationException((ConfigurationException) exception, operation, errorStream);
-    } else if (exception instanceof CliUsageException) {
-      return handleCliUsageException((CliUsageException) exception, errorStream);
-    } else {
-      // Generic exception handling
-      LoggingUtils.logStructuredError(
-          "cli_exception", operation, "UNEXPECTED_ERROR", exception.getMessage(), exception);
-      final String userMessage = translateExceptionForCli(exception);
-      errorStream.println(ERROR_PREFIX + userMessage);
-      return 1;
-    }
+    return switch (exception) {
+      case SQLException sqlEx -> handleCliSQLException(sqlEx, operation, errorStream);
+      case ConfigurationException configEx -> handleCliConfigurationException(configEx, operation, errorStream);
+      case CliUsageException usageEx -> handleCliUsageException(usageEx, errorStream);
+      default -> {
+        // Generic exception handling
+        LoggingUtils.logStructuredError(
+            "cli_exception", operation, "UNEXPECTED_ERROR", exception.getMessage(), exception);
+        final String userMessage = translateExceptionForCli(exception);
+        errorStream.println(ERROR_PREFIX + userMessage);
+        yield 1;
+      }
+    };
   }
 
   /**
@@ -195,18 +195,17 @@ public final class ExceptionUtils {
 
   /**
    * Translates generic exceptions to user-friendly messages for CLI output.
+   * Uses Java 21 pattern matching for cleaner type checking.
    * 
    * @param exception exception to translate
    * @return user-friendly message
    */
   private static String translateExceptionForCli(final Exception exception) {
-    if (exception instanceof IllegalArgumentException) {
-      return "Invalid parameter: " + exception.getMessage();
-    } else if (exception instanceof SecurityException) {
-      return "Access denied: " + exception.getMessage();
-    } else {
-      return "Operation failed: " + exception.getMessage();
-    }
+    return switch (exception) {
+      case IllegalArgumentException ex -> "Invalid parameter: " + ex.getMessage();
+      case SecurityException ex -> "Access denied: " + ex.getMessage();
+      default -> "Operation failed: " + exception.getMessage();
+    };
   }
 
   /**

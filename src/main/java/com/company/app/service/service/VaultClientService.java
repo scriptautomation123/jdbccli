@@ -151,11 +151,11 @@ public final class VaultClientService {
 
                 try (VaultClient vaultClient = new VaultClient()) {
                         final String password = vaultClient.fetchOraclePassword(
-                                        vaultConfig.getVaultUrl(),
-                                        vaultConfig.getRoleId(),
-                                        vaultConfig.getSecretId(),
+                                        vaultConfig.vaultUrl(),
+                                        vaultConfig.roleId(),
+                                        vaultConfig.secretId(),
                                         request.getDatabase(),
-                                        vaultConfig.getAit(),
+                                        vaultConfig.ait(),
                                         request.getUser());
 
                         if (password != null && !password.trim().isEmpty()) {

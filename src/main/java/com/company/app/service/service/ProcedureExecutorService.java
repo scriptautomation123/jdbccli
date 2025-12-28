@@ -13,7 +13,7 @@ import com.company.app.service.util.LoggingUtils;
  * Extends AbstractDatabaseExecutionService to provide procedure-specific
  * execution logic.
  */
-public class ProcedureExcecutorService extends AbstractDatabaseExecutionService {
+public class ProcedureExecutorService extends AbstractDatabaseExecutionService {
 
   /** Static procedure executor instance for database operations */
   private static final ProcedureExecutor PROCEDURE_EXECUTOR = new ProcedureExecutor();
@@ -27,7 +27,7 @@ public class ProcedureExcecutorService extends AbstractDatabaseExecutionService 
    * 
    * @param passwordResolver resolver for database passwords
    */
-  public ProcedureExcecutorService(final PasswordResolver passwordResolver) {
+  public ProcedureExecutorService(final PasswordResolver passwordResolver) {
     super(passwordResolver);
   }
 

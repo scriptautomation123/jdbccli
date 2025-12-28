@@ -8,8 +8,9 @@
     <name>Util CLI</name>
     <description>Minimal Oracle CLI utility</description>
     <properties>
-        <maven.compiler.source>8</maven.compiler.source>
-        <maven.compiler.target>8</maven.compiler.target>
+        <maven.compiler.source>21</maven.compiler.source>
+        <maven.compiler.target>21</maven.compiler.target>
+        <maven.compiler.release>21</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <log4j2.version>2.25.3</log4j2.version>
         <jackson.version>2.19.2</jackson.version>
@@ -179,11 +180,11 @@
 
 
     <profiles>
-        <!-- Profile 1: Java 8 (Default) -->
+        <!-- Profile 1: Java 8 (Legacy, not default) -->
         <profile>
             <id>java8</id>
             <activation>
-                <activeByDefault>true</activeByDefault>
+                <activeByDefault>false</activeByDefault>
             </activation>
             <properties>
                 <maven.compiler.source>8</maven.compiler.source>
@@ -255,11 +256,11 @@
             </build>
         </profile>
 
-        <!-- Profile 2: Java 21 (No JRE) -->
+        <!-- Profile 2: Java 21 (No JRE) - Default -->
         <profile>
             <id>java21</id>
             <activation>
-                <activeByDefault>false</activeByDefault>
+                <activeByDefault>true</activeByDefault>
             </activation>
             <properties>
                 <maven.compiler.source>21</maven.compiler.source>

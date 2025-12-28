@@ -323,6 +323,7 @@
     </dependencies>
   </dependencyManagement>
   <properties>
+    <maven.compiler.release>21</maven.compiler.release>
     <shade.plugin.version>3.6.0</shade.plugin.version>
     <oracle.jdbc.version>23.8.0.25.04</oracle.jdbc.version>
     <jackson.version>2.19.2</jackson.version>
@@ -331,10 +332,10 @@
     <maven.compiler.plugin.version>3.14.0</maven.compiler.plugin.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <log4j2.version>2.25.3</log4j2.version>
-    <maven.compiler.source>8</maven.compiler.source>
+    <maven.compiler.source>21</maven.compiler.source>
     <versions.plugin.version>2.18.0</versions.plugin.version>
     <exec.plugin.version>3.5.1</exec.plugin.version>
-    <maven.compiler.target>8</maven.compiler.target>
+    <maven.compiler.target>21</maven.compiler.target>
     <assembly.plugin.version>3.7.1</assembly.plugin.version>
     <maven.surefire.plugin.version>3.2.5</maven.surefire.plugin.version>
     <maven.enforcer.plugin.version>3.6.1</maven.enforcer.plugin.version>

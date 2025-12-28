@@ -19,27 +19,23 @@ public class ConnectionStringGenerator {
     return appConfig;
   }
 
-  public static class ConnInfo {
-    private final String url;
-    private final String user;
-    private final String password;
-
-    public ConnInfo(String url, String user, String password) {
-      this.url = Objects.requireNonNull(url, "URL cannot be null");
-      this.user = Objects.requireNonNull(user, "User cannot be null");
-      this.password = Objects.requireNonNull(password, "Password cannot be null");
-    }
-
-    public String getUrl() {
-      return url;
-    }
-
-    public String getUser() {
-      return user;
-    }
-
-    public String getPassword() {
-      return password;
+  /**
+   * Connection information record containing URL, user, and password.
+   * Uses Java 21 record for immutable data.
+   * 
+   * @param url      JDBC connection URL
+   * @param user     database username
+   * @param password database password
+   */
+  public record ConnInfo(String url, String user, String password) {
+    
+    /**
+     * Compact constructor with validation.
+     */
+    public ConnInfo {
+      Objects.requireNonNull(url, "URL cannot be null");
+      Objects.requireNonNull(user, "User cannot be null");
+      Objects.requireNonNull(password, "Password cannot be null");
     }
   }
 
