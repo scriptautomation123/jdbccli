@@ -43,6 +43,7 @@ See the documentation files below for step-by-step instructions.
 
 - **[QUICKREF.md](QUICKREF.md)** - Quick reference with TL;DR commands
 - **[RELEASE_AND_MERGE_GUIDE.md](RELEASE_AND_MERGE_GUIDE.md)** - Comprehensive guide with detailed explanations
+- **[WORKFLOW_DIAGRAM.md](WORKFLOW_DIAGRAM.md)** - Visual diagrams and flowcharts of the workflow
 - **[CHECKLIST.md](CHECKLIST.md)** - Step-by-step checklist to track your progress
 - **[release-and-merge.sh](release-and-merge.sh)** - Automated workflow script
 
