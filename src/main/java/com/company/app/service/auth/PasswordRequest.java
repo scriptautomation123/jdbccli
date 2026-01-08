@@ -101,7 +101,7 @@ public final class PasswordRequest {
   }
 
   private static boolean isNonEmpty(final String value) {
-    return value != null && !value.trim().isEmpty();
+    return value != null && !value.isBlank();
   }
 
   /**

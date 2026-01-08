@@ -152,6 +152,6 @@ public class PasswordResolver {
   }
 
   private static Optional<String> validatePassword(final String password) {
-    return Optional.ofNullable(password).filter(pwd -> !pwd.trim().isEmpty());
+    return Optional.ofNullable(password).filter(pwd -> !pwd.isBlank());
   }
 }

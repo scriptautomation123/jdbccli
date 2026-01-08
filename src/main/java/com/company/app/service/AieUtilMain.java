@@ -12,8 +12,7 @@ import picocli.CommandLine.Command;
  */
 @Command(name = "aieutil", mixinStandardHelpOptions = true, description = "AIE Utility - Database and Vault CLI Tool", version = "1.0.0", subcommands = {
         ExecProcedureCmd.class,
-        ExecSqlCmd.class,
-        ExecVaultClientCmd.class
+        ExecSqlCmd.class
 })
 public class AieUtilMain {
 

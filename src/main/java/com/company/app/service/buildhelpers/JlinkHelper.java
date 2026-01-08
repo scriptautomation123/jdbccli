@@ -44,7 +44,7 @@ public class JlinkHelper {
         };
         System.out.println("[INFO] Running jdeps..."); // NOSONAR
         String modules = runAndCapture(jdepsCmd);
-        if (modules == null || modules.trim().isEmpty()) {
+        if (modules == null || modules.isBlank()) {
             System.err.println("jdeps did not return any modules. Aborting."); // NOSONAR
             System.exit(4);
         }

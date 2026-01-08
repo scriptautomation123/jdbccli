@@ -19,27 +19,23 @@ public class ConnectionStringGenerator {
     return appConfig;
   }
 
-  public static class ConnInfo {
-    private final String url;
-    private final String user;
-    private final String password;
-
-    public ConnInfo(String url, String user, String password) {
-      this.url = Objects.requireNonNull(url, "URL cannot be null");
-      this.user = Objects.requireNonNull(user, "User cannot be null");
-      this.password = Objects.requireNonNull(password, "Password cannot be null");
-    }
-
-    public String getUrl() {
-      return url;
-    }
-
-    public String getUser() {
-      return user;
-    }
-
-    public String getPassword() {
-      return password;
+  /**
+   * Connection information record containing URL, user, and password.
+   * Uses Java 21 record for immutable data.
+   * 
+   * @param url      JDBC connection URL
+   * @param user     database username
+   * @param password database password
+   */
+  public record ConnInfo(String url, String user, String password) {
+    
+    /**
+     * Compact constructor with validation.
+     */
+    public ConnInfo {
+      Objects.requireNonNull(url, "URL cannot be null");
+      Objects.requireNonNull(user, "User cannot be null");
+      Objects.requireNonNull(password, "Password cannot be null");
     }
   }
 
@@ -78,19 +74,30 @@ public class ConnectionStringGenerator {
   private static class OracleJdbc implements ConnectionStrategy {
     private final String host;
     private final String database;
+    private final Integer port;
 
     public OracleJdbc(String host, String database) {
+      this(host, database, null);
+    }
+
+    public OracleJdbc(String host, String database, Integer port) {
       this.host = host;
       this.database = database;
+      this.port = port;
     }
 
     @Override
     public String buildUrl() {
       try {
         String template = getConfig().getRawValue("databases.oracle.connection-string.jdbc-thin.template");
-        int port = Integer.parseInt(
-            getConfig().getRawValue("databases.oracle.connection-string.jdbc-thin.port"));
-        return String.format(template, host, port, database);
+        int portToUse;
+        if (this.port != null) {
+          portToUse = this.port;
+        } else {
+          portToUse = Integer.parseInt(
+              getConfig().getRawValue("databases.oracle.connection-string.jdbc-thin.port"));
+        }
+        return String.format(template, host, portToUse, database);
       } catch (Exception e) {
         throw ExceptionUtils.wrap(
             e, "Failed to build Oracle JDBC URL for host=" + host + ", database=" + database);
@@ -131,23 +138,37 @@ public class ConnectionStringGenerator {
 
   public static ConnInfo createConnectionString(
       String type, String database, String user, String password, String host) {
-    ConnectionStrategy strategy;
+    ConnectionStrategy strategy = buildConnectionStrategy(type, database, host);
+    return new ConnInfo(strategy.buildUrl(), user, password);
+  }
 
-    if ("h2".equals(type)) {
-      if (host != null && !host.trim().isEmpty()) {
-        strategy = new H2Jdbc(database);
-      } else {
-        strategy = new H2Memory(database);
-      }
-    } else {
-      if (host != null && !host.trim().isEmpty()) {
-        strategy = new OracleJdbc(host, database);
-      } else {
-        strategy = new OracleLdap(database);
+  private static ConnectionStrategy buildConnectionStrategy(String type, String database, String host) {
+    if (isH2(type)) {
+      return hasHost(host) ? new H2Jdbc(database) : new H2Memory(database);
+    }
+    return hasHost(host) ? new OracleJdbc(host, database) : buildOracleFromDatabaseString(database);
+  }
+
+  private static boolean isH2(String type) {
+    return "h2".equals(type);
+  }
+
+  private static boolean hasHost(String host) {
+    return host != null && !host.trim().isEmpty();
+  }
+
+  private static ConnectionStrategy buildOracleFromDatabaseString(String database) {
+    String[] parts = database.split(":");
+    if (parts.length == 3) {
+      try {
+        int port = Integer.parseInt(parts[1]);
+        // parts[0] is host, parts[2] is sid/service
+        return new OracleJdbc(parts[0], parts[2], port);
+      } catch (NumberFormatException e) {
+        return new OracleLdap(database);
       }
     }
-
-    return new ConnInfo(strategy.buildUrl(), user, password);
+    return new OracleLdap(database);
   }
 
   public static ConnInfo createSampleConnection() {

@@ -119,7 +119,7 @@ public class ProcedureExecutor {
      */
     public Object getTypedValue() {
       final String typeUpper = paramType.toUpperCase(Locale.ROOT);
-      Object result = null;
+      Object result = paramValue;
 
       switch (typeUpper) {
         case "NUMBER":
@@ -134,7 +134,6 @@ public class ProcedureExecutor {
           result = Boolean.parseBoolean(paramValue.toString());
           break;
         default:
-          result = paramValue;
           break;
       }
 
@@ -283,7 +282,7 @@ public class ProcedureExecutor {
   }
 
   private static boolean isNullOrEmpty(final String value) {
-    return value == null || value.trim().isEmpty();
+    return value == null || value.isBlank();
   }
 
   /**

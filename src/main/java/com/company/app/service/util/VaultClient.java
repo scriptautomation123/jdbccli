@@ -6,6 +6,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
+import java.net.URI;
 import java.net.URL;
 import java.util.Collections;
 import java.util.List;
@@ -103,7 +104,7 @@ public final class VaultClient implements AutoCloseable {
    * @throws ExceptionUtils.ConfigurationException if URL is invalid
    */
   private String buildVaultBaseUrl(final String baseUrl) {
-    if (baseUrl == null || baseUrl.isEmpty()) {
+    if (baseUrl == null || baseUrl.isBlank()) {
       throw new ExceptionUtils.ConfigurationException("Base URL cannot be null or empty");
     }
 
@@ -174,7 +175,7 @@ public final class VaultClient implements AutoCloseable {
    * @return true if parameter is valid, false otherwise
    */
   private boolean isValidParameter(final String paramValue, final String paramName, final String user) {
-    if (paramValue == null || paramValue.trim().isEmpty()) {
+    if (paramValue == null || paramValue.isBlank()) {
       LoggingUtils.logStructuredError(
           VAULT_OPERATION,
           FETCH_PASSWORD,
@@ -230,7 +231,7 @@ public final class VaultClient implements AutoCloseable {
    */
   public static Map<String, Object> getVaultParamsForUser(final String user, final String database) {
     final String vaultConfigPath = System.getProperty("vault.config");
-    if (vaultConfigPath == null || vaultConfigPath.trim().isEmpty()) {
+    if (vaultConfigPath == null || vaultConfigPath.isBlank()) {
       throw new ExceptionUtils.ConfigurationException(
           "vault.config system property must be specified. Use -Dvault.config=/path/to/vaults.yaml");
     }
@@ -374,7 +375,7 @@ public final class VaultClient implements AutoCloseable {
    * @throws IOException if the request fails
    */
   private String httpGet(final String url, final Map<String, String> headers) throws IOException {
-    final URL urlObj = new URL(url);
+    final URL urlObj = URI.create(url).toURL();
     final HttpURLConnection connection = (HttpURLConnection) urlObj.openConnection();
     connection.setRequestMethod("GET");
     connection.setConnectTimeout(CONNECTION_REQUEST_TIMEOUT_MS);
@@ -467,7 +468,7 @@ public final class VaultClient implements AutoCloseable {
    * @throws IOException if the request fails
    */
   private String httpPost(final String url, final Map<String, String> headers, final String body) throws IOException {
-    final URL urlObj = new URL(url);
+    final URL urlObj = URI.create(url).toURL();
     final HttpURLConnection connection = (HttpURLConnection) urlObj.openConnection();
     connection.setRequestMethod("POST");
     connection.setConnectTimeout(CONNECTION_REQUEST_TIMEOUT_MS);
