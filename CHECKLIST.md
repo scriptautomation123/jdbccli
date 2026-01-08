@@ -149,7 +149,11 @@ In case issues are discovered after merge:
 
 ```bash
 # Automated (Recommended)
+# First ensure execute permissions (if needed):
+chmod +x release-and-merge.sh
 ./release-and-merge.sh
+# OR simply:
+bash release-and-merge.sh
 
 # Manual
 git checkout main && git pull origin main

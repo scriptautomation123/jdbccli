@@ -3,8 +3,19 @@
 # Release and Merge Automation Script
 # This script automates the process of creating releases and merging branches
 # as documented in RELEASE_AND_MERGE_GUIDE.md
+#
+# Usage:
+#   ./release-and-merge.sh
+#   OR
+#   bash release-and-merge.sh
+#
+# Note: If using './' syntax, ensure the script has execute permissions:
+#   chmod +x release-and-merge.sh
 
 set -e  # Exit on error
+
+# Configuration
+FEATURE_BRANCH="copilot/review-refactor-oo-design"
 
 # Colors for output
 RED='\033[0;31m'
@@ -108,21 +119,21 @@ echo "https://github.com/scriptautomation123/jdbccli/releases/new?tag=$PRE_VERSI
 print_section "Step 2: Review Changes to be Merged"
 
 print_info "Fetching branch to merge..."
-git fetch origin copilot/review-refactor-oo-design
+git fetch origin $FEATURE_BRANCH
 
 print_info "Changes summary:"
-git diff --stat main origin/copilot/review-refactor-oo-design | head -20
+git diff --stat main origin/$FEATURE_BRANCH | head -20
 
 echo ""
 print_info "Commit history that will be merged:"
-git log --oneline main..origin/copilot/review-refactor-oo-design
+git log --oneline main..origin/$FEATURE_BRANCH
 
 echo ""
 read -p "Do you want to see detailed changes? (y/n): " -n 1 -r
 echo
 if [[ $REPLY =~ ^[Yy]$ ]]; then
     print_info "Showing key file changes..."
-    git diff main origin/copilot/review-refactor-oo-design -- pom.xml | head -50
+    git diff main origin/$FEATURE_BRANCH -- pom.xml | head -50
     echo ""
     print_info "Press Enter to continue..."
     read
@@ -132,15 +143,15 @@ fi
 print_section "Step 3: Merge Branch"
 
 echo ""
-read -p "Proceed with merging copilot/review-refactor-oo-design into main? (y/n): " -n 1 -r
+read -p "Proceed with merging $FEATURE_BRANCH into main? (y/n): " -n 1 -r
 echo
 if [[ ! $REPLY =~ ^[Yy]$ ]]; then
     print_warning "Merge cancelled by user."
     exit 0
 fi
 
-print_info "Merging copilot/review-refactor-oo-design into main..."
-if git merge origin/copilot/review-refactor-oo-design --no-ff -m "Merge copilot/review-refactor-oo-design: Java 21 migration and OO design improvements"; then
+print_info "Merging $FEATURE_BRANCH into main..."
+if git merge origin/$FEATURE_BRANCH --no-ff -m "Merge $FEATURE_BRANCH: Java 21 migration and OO design improvements"; then
     print_success "Merge completed successfully!"
 else
     print_error "Merge failed with conflicts. Please resolve conflicts manually:"
@@ -230,7 +241,7 @@ print_success "Post-merge release $POST_VERSION created successfully!"
 print_section "Step 7: Cleanup (Optional)"
 
 echo ""
-read -p "Do you want to delete the remote branch copilot/review-refactor-oo-design? (y/n): " -n 1 -r
+read -p "Do you want to delete the remote branch $FEATURE_BRANCH? (y/n): " -n 1 -r
 echo
 if [[ $REPLY =~ ^[Yy]$ ]]; then
     print_warning "This will permanently delete the remote branch."
@@ -238,7 +249,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
     echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         print_info "Deleting remote branch..."
-        git push origin --delete copilot/review-refactor-oo-design || print_warning "Could not delete remote branch. It may have been already deleted or you may not have permissions."
+        git push origin --delete $FEATURE_BRANCH || print_warning "Could not delete remote branch. It may have been already deleted or you may not have permissions."
         print_success "Remote branch deleted (if it existed)."
     fi
 else
@@ -253,7 +264,7 @@ echo ""
 echo "Summary:"
 echo "  • Pre-merge release: $PRE_VERSION"
 echo "  • Post-merge release: $POST_VERSION"
-echo "  • Branch merged: copilot/review-refactor-oo-design → main"
+echo "  • Branch merged: $FEATURE_BRANCH → main"
 echo ""
 echo "Next steps:"
 echo "  1. Create GitHub releases at:"

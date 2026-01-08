@@ -33,7 +33,12 @@ For the release and merge workflow, you have two options:
 
 #### Option 1: Automated Script (Recommended)
 ```bash
+# Ensure execute permissions
+chmod +x release-and-merge.sh
 ./release-and-merge.sh
+
+# OR
+bash release-and-merge.sh
 ```
 
 #### Option 2: Manual Process

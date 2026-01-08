@@ -6,7 +6,12 @@
 
 ```bash
 # Run the interactive automation script
+# First ensure execute permissions (if needed):
+chmod +x release-and-merge.sh
 ./release-and-merge.sh
+
+# OR simply:
+bash release-and-merge.sh
 ```
 
 The script will guide you through the entire process interactively.
