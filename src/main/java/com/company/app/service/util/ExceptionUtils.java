@@ -3,6 +3,8 @@ package com.company.app.service.util;
 import java.io.PrintStream;
 import java.sql.SQLException;
 
+import com.company.app.service.service.model.ExecutionResult;
+
 import picocli.CommandLine;
 
 /**
@@ -79,6 +81,36 @@ public final class ExceptionUtils {
     org.apache.logging.log4j.ThreadContext.clearAll();
 
     return new ConfigurationException(message, exception);
+  }
+
+  /**
+   * Handles execution exceptions with structured logging and appropriate return or rethrow.
+   * 
+   * @param exception exception to handle
+   * @param context   context identifier for logging
+   * @param operation operation identifier for logging
+   * @return execution result if handleable, otherwise rethrows
+   */
+  public static ExecutionResult handleExecutionException(
+      final Exception exception, final String context, final String operation) {
+
+    if (exception instanceof IllegalArgumentException) {
+      LoggingUtils.logStructuredError(
+          context,
+          operation,
+          "FAILED",
+          "Invalid parameters: " + exception.getMessage(),
+          exception);
+      return ExecutionResult.failure(1, "[ERROR] Invalid parameters: " + exception.getMessage());
+    }
+
+    LoggingUtils.logStructuredError(
+        context,
+        operation,
+        "FAILED",
+        "Unexpected error: " + exception.getMessage(),
+        exception);
+    throw wrap(exception, "Failed to execute database operation");
   }
 
   /**

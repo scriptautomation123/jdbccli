@@ -1,53 +1,136 @@
+cd docker && docker compose down -v && docker compose up -d && cd ..
+./run_all_tests.sh
 
-
-### Resolving GitHub Email Privacy Issues
-
-When pushing to GitHub, you might encounter the following error:
-`remote: error: GH007: Your push would publish a private email address.`
-
-This happens because your GitHub account is configured to keep your email address private, but your local Git configuration is using a personal email address (e.g.,  that matches your account's primary email.
-
-#### How to Fix
-
-To resolve this and prevent future push rejections, you should update your Git configuration to use GitHub's "no-reply" email address.
-
-##### 1. Find Your No-Reply Email
-GitHub automatically generates a no-reply email for every user in the format:
-`ID+USERNAME@users.noreply.github.com`
-
-For this account, the email is:
-******
-
-##### 2. Update Your Git Configuration
-
-**To update only this specific repository (Local):**
-Run this command from within the project directory:
-```powershell
-git config user.email "****************@users.noreply.github.com"
+```bash
+cd ~/code/scriptautomation123/jdbccli/target/dist/cliutil-1.0.0 &&\
+./jre/bin/java \
+-Dlog4j.configurationFile=file:./log4j2.xml \
+-Dvault.config=./vaults.yaml \
+-jar ./cliutil-1.0.0.jar exec-sql "SELECT * FROM hr.employees WHERE rownum <= 5" \
+--type oracle \
+--database localhost:1521:xe \
+--user hr
 ```
 
-**To update for all future projects (Global):**
-Run:
-```powershell
-git config --global user.email "**********@users.noreply.github.com"
+# 1. Get employee salary (use SQL, not procedure)
+
+```bash
+cd ~/code/scriptautomation123/jdbccli/target/dist/cliutil-1.0.0 &&\
+./jre/bin/java \
+-Dlog4j.configurationFile=file:./log4j2.xml \
+-Dvault.config=./vaults.yaml \
+-jar ./cliutil-1.0.0.jar exec-sql "SELECT hr.hr_pkg.get_employee_salary(100) as salary FROM dual" \
+--type oracle \
+--database localhost:1521:xe \
+--user hr
 ```
 
-##### 3. Fix Existing Commits
-If you have already made commits with the wrong email and they are failing to push, you need to update those commits before pushing again:
+# 2. Get department budget (use SQL)
 
-```powershell
-git commit --amend --reset-author --no-edit
-git push origin main
+```bash
+cd ~/code/scriptautomation123/jdbccli/target/dist/cliutil-1.0.0 &&\
+./jre/bin/java \
+-Dlog4j.configurationFile=file:./log4j2.xml \
+-Dvault.config=./vaults.yaml \
+-jar ./cliutil-1.0.0.jar exec-sql "SELECT hr.hr_pkg.get_department_budget(80) as budget FROM dual" \
+--type oracle \
+--database localhost:1521:xe \
+--user hr
 ```
 
-#### Why use the No-Reply address?
-*   **Privacy:** Keeps your personal email address hidden from the public commit history.
-*   **Reliability:** Prevents GitHub from rejecting your pushes due to privacy protections.
-*   **Account Linking:** GitHub still recognizes these commits as yours and associates them with your profile (e.g., showing your avatar and counting towards your contribution graph).
-echo "# jdbccli" >> README.md
-git init
-git add README.md
-git commit -m "first commit"
-git branch -M main
-z
-git push -u origin main
+# 3. Calculate bonus (use SQL)
+
+```bash
+cd ~/code/scriptautomation123/jdbccli/target/dist/cliutil-1.0.0 &&\
+./jre/bin/java \
+-Dlog4j.configurationFile=file:./log4j2.xml \
+-Dvault.config=./vaults.yaml \
+-jar ./cliutil-1.0.0.jar exec-sql "SELECT hr.calculate_bonus(10000, 15) as bonus FROM dual" \
+--type oracle \
+--database localhost:1521:xe \
+--user hr
+```
+
+# 4. Get employee details (procedure with input parameter)
+
+```bash
+cd ~/code/scriptautomation123/jdbccli/target/dist/cliutil-1.0.0 &&\
+./jre/bin/java \
+-Dlog4j.configurationFile=file:./log4j2.xml \
+-Dvault.config=./vaults.yaml \
+-jar ./cliutil-1.0.0.jar exec-proc hr.get_employee_details \
+--input "p_employee_id:NUMBER:100" \
+--type oracle \
+--database localhost:1521:xe \
+--user hr
+```
+
+# 5. Get department info (procedure with input parameter)
+
+```bash
+cd ~/code/scriptautomation123/jdbccli/target/dist/cliutil-1.0.0 &&\
+./jre/bin/java \
+-Dlog4j.configurationFile=file:./log4j2.xml \
+-Dvault.config=./vaults.yaml \
+-jar ./cliutil-1.0.0.jar exec-proc hr.get_department_info \
+--input "p_department_id:NUMBER:80" \
+--type oracle \
+--database localhost:1521:xe \
+--user hr
+```
+
+# 6. Raise employee salary (package procedure with multiple inputs)
+
+```bash
+cd ~/code/scriptautomation123/jdbccli/target/dist/cliutil-1.0.0 &&\
+./jre/bin/java \
+-Dlog4j.configurationFile=file:./log4j2.xml \
+-Dvault.config=./vaults.yaml \
+-jar ./cliutil-1.0.0.jar exec-proc hr.hr_pkg.raise_employee_salary \
+--input "p_employee_id:NUMBER:100,p_raise_percent:NUMBER:10" \
+--type oracle \
+--database localhost:1521:xe \
+--user hr
+```
+
+# 7. Hire new employee (package procedure with 6 input parameters)
+
+```bash
+cd ~/code/scriptautomation123/jdbccli/target/dist/cliutil-1.0.0 &&\
+./jre/bin/java \
+-Dlog4j.configurationFile=file:./log4j2.xml \
+-Dvault.config=./vaults.yaml \
+-jar ./cliutil-1.0.0.jar exec-proc hr.hr_pkg.hire_employee \
+--input "p_first_name:VARCHAR2:John,p_last_name:VARCHAR2:Doe,p_email:VARCHAR2:jdoe@example.com,p_job_id:VARCHAR2:IT_PROG,p_salary:NUMBER:8000,p_department_id:NUMBER:60" \
+--type oracle \
+--database localhost:1521:xe \
+--user hr
+```
+
+# 8. Update job history (package procedure with 3 input parameters)
+
+```bash
+cd ~/code/scriptautomation123/jdbccli/target/dist/cliutil-1.0.0 &&\
+./jre/bin/java \
+-Dlog4j.configurationFile=file:./log4j2.xml \
+-Dvault.config=./vaults.yaml \
+-jar ./cliutil-1.0.0.jar exec-proc hr.hr_pkg.update_job_history \
+--input "p_employee_id:NUMBER:100,p_new_job_id:VARCHAR2:AD_VP,p_new_department_id:NUMBER:90" \
+--type oracle \
+--database localhost:1521:xe \
+--user hr
+```
+
+# 9. Terminate employee (package procedure with 1 input parameter)
+
+```bash
+cd ~/code/scriptautomation123/jdbccli/target/dist/cliutil-1.0.0 &&\
+./jre/bin/java \
+-Dlog4j.configurationFile=file:./log4j2.xml \
+-Dvault.config=./vaults.yaml \
+-jar ./cliutil-1.0.0.jar exec-proc hr.hr_pkg.terminate_employee \
+--input "p_employee_id:NUMBER:100" \
+--type oracle \
+--database localhost:1521:xe \
+--user hr
+```

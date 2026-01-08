@@ -1,4 +1,4 @@
-package com.company.app.service.service;
+package com.company.app.service.service.model;
 
 import java.io.PrintStream;
 import java.util.Map;

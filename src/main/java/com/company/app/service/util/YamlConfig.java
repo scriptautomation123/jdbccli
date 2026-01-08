@@ -43,7 +43,7 @@ public class YamlConfig {
   }
 
   public String getRawValue(String key) {
-    if (key == null || key.trim().isEmpty()) {
+    if (key == null || key.isBlank()) {
       LoggingUtils.logStructuredError(
           "config_access",
           "get_raw_value",

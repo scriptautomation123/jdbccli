@@ -1,4 +1,4 @@
-package com.company.app.service.service;
+package com.company.app.service.service.model;
 
 /**
  * Immutable configuration record for Vault authentication parameters.
@@ -36,6 +36,6 @@ public record VaultConfig(String vaultUrl, String roleId, String secretId, Strin
    * @return true if non-null and non-blank
    */
   private static boolean isNonBlank(final String value) {
-    return value != null && !value.trim().isEmpty();
+    return value != null && !value.isBlank();
   }
 }

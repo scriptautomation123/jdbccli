@@ -1,17 +1,21 @@
-package com.company.app.service.cli;
+package com.company.app.service. cli;
 
-import java.util.concurrent.Callable;
+import java.util. concurrent.Callable;
 
-import com.company.app.service.service.AbstractDatabaseExecutionService;
-import com.company.app.service.service.VaultConfig;
+import com.company.app.service.service.model.VaultConfig;
 
 import picocli.CommandLine.Model.CommandSpec;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Spec;
 
+/**
+ * Abstract base class for database CLI commands providing common PicoCLI options
+ * and vault configuration support.
+ * Uses composition internally - subclasses create their own service instances.
+ */
 public abstract class BaseDatabaseCliCommand implements Callable<Integer> {
 
-  // Common PicoCLI options
+  // Common PicoCLI options shared across all database commands
   @Option(names = { "-t", "--type" }, description = "Database type", defaultValue = "oracle")
   protected String type;
 
@@ -36,16 +40,29 @@ public abstract class BaseDatabaseCliCommand implements Callable<Integer> {
   @Spec
   protected CommandSpec spec;
 
-  protected final AbstractDatabaseExecutionService service;
-
-  protected BaseDatabaseCliCommand(AbstractDatabaseExecutionService service) {
-    this.service = service;
+  /**
+   * Default constructor for PicoCLI initialization.
+   * Subclasses should create their own service instances.
+   */
+  protected BaseDatabaseCliCommand() {
+    // PicoCLI requires no-arg constructor
   }
 
+  /**
+   * Creates vault configuration from command-line options.
+   * 
+   * @return vault configuration object
+   */
   protected VaultConfig createVaultConfig() {
     return new VaultConfig(vaultUrl, roleId, secretId, ait);
   }
 
+  /**
+   * Prompts user for password via console or standard input.
+   * This is a fallback - prefer using PasswordResolver for vault-based auth.
+   * 
+   * @return password entered by user
+   */
   protected String promptForPassword() {
     spec.commandLine().getOut().print("Enter password: ");
     if (System.console() != null) {

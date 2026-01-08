@@ -65,7 +65,7 @@ public final class DatabaseConnectionManager {
     }
 
     private static boolean isNullOrBlank(final String value) {
-      return value == null || value.trim().isEmpty();
+        return value == null || value.isBlank();
     }
   }
 

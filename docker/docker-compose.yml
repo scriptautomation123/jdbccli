@@ -1,0 +1,19 @@
+services:
+  oracle:
+    image: gvenzl/oracle-xe:21-slim
+    container_name: oracle-xe
+    shm_size: 1g
+    ports:
+      - 1521:1521
+    environment:
+      ORACLE_PASSWORD: password
+      APP_USER: app
+      APP_USER_PASSWORD: app
+      ORACLE_ACCEPT_LICENSE: "yes"
+    volumes:
+      - ./init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: [CMD, oracle, healthcheck]
+      interval: 10s
+      timeout: 5s
+      retries: 20
