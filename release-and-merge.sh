@@ -5,17 +5,25 @@
 # as documented in RELEASE_AND_MERGE_GUIDE.md
 #
 # Usage:
-#   ./release-and-merge.sh
+#   ./release-and-merge.sh [branch-name]
 #   OR
-#   bash release-and-merge.sh
+#   bash release-and-merge.sh [branch-name]
+#   OR
+#   FEATURE_BRANCH=my-branch ./release-and-merge.sh
 #
 # Note: If using './' syntax, ensure the script has execute permissions:
 #   chmod +x release-and-merge.sh
+#
+# Examples:
+#   ./release-and-merge.sh
+#   ./release-and-merge.sh copilot/my-feature
+#   FEATURE_BRANCH=my-feature bash release-and-merge.sh
 
 set -e  # Exit on error
 
 # Configuration
-FEATURE_BRANCH="copilot/review-refactor-oo-design"
+GITHUB_REPO="scriptautomation123/jdbccli"
+FEATURE_BRANCH="${1:-${FEATURE_BRANCH:-copilot/review-refactor-oo-design}}"
 
 # Colors for output
 RED='\033[0;31m'
@@ -60,7 +68,7 @@ print_section "JDBCCLI Release and Merge Workflow"
 
 echo "This script will guide you through:"
 echo "  1. Creating a pre-merge release from main branch"
-echo "  2. Merging copilot/review-refactor-oo-design into main"
+echo "  2. Merging $FEATURE_BRANCH into main"
 echo "  3. Creating a post-merge release"
 echo ""
 
@@ -113,7 +121,7 @@ git push origin "$PRE_VERSION"
 print_success "Pre-merge release $PRE_VERSION created successfully!"
 echo ""
 print_warning "You can now create a GitHub release at:"
-echo "https://github.com/scriptautomation123/jdbccli/releases/new?tag=$PRE_VERSION"
+echo "https://github.com/$GITHUB_REPO/releases/new?tag=$PRE_VERSION"
 
 # Step 2: Review changes
 print_section "Step 2: Review Changes to be Merged"
@@ -268,8 +276,8 @@ echo "  • Branch merged: $FEATURE_BRANCH → main"
 echo ""
 echo "Next steps:"
 echo "  1. Create GitHub releases at:"
-echo "     - https://github.com/scriptautomation123/jdbccli/releases/new?tag=$PRE_VERSION"
-echo "     - https://github.com/scriptautomation123/jdbccli/releases/new?tag=$POST_VERSION"
+echo "     - https://github.com/$GITHUB_REPO/releases/new?tag=$PRE_VERSION"
+echo "     - https://github.com/$GITHUB_REPO/releases/new?tag=$POST_VERSION"
 echo ""
 echo "  2. Update documentation if needed"
 echo ""
