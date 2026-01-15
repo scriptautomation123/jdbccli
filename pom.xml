@@ -12,6 +12,7 @@
         <module>core</module>
         <module>vault-client</module>
         <module>cliutil</module>
+        <module>package-helper</module>
     </modules>
 
     <properties>

@@ -6,7 +6,6 @@ setlocal
 set "SCRIPT_DIR=%~dp0"
 set "BUNDLE_DIR=%SCRIPT_DIR%"
 
-REM Find JAR file
 for %%f in ("%BUNDLE_DIR%\aieutil-*.jar") do (
     set "JAR_FILE=%%f"
     goto :found_jar
@@ -27,12 +26,10 @@ if exist "%JRE_DIR%\bin\java.exe" (
     set "JAVA_TYPE=system"
 )
 
-REM Get Java version
-for /f "tokens=3 delims= " %%v in ('"%JAVA_CMD%" -version 2>&1 ^| findstr /i "version"') do (
+for /f "tokens=3 delims= " %%v in ('"%JAVA_CMD%" -version 2^>^&1 ^| findstr /i "version"') do (
     set "JAVA_VER=%%v"
 )
-REM Remove quotes and get major version
-set "JAVA_VER=%JAVA_VER:\"=%"
+set "JAVA_VER=%JAVA_VER:"=%"
 for /f "tokens=1,2 delims=." %%a in ("%JAVA_VER%") do (
     set "JAVA_MAJOR=%%a"
     set "JAVA_MINOR=%%b"
@@ -63,10 +60,8 @@ if exist "%BUNDLE_DIR%\log4j2.xml" (
     set "JAVA_OPTS=%JAVA_OPTS% -Dlog4j.configurationFile=%BUNDLE_DIR%\log4j2.xml"
 )
 
-REM Check for required --vault-config parameter
 set "VAULT_CONFIG="
 
-REM Check if first argument is --vault-config
 if "%1"=="--vault-config" (
     set "VAULT_CONFIG=%2"
     shift
@@ -78,26 +73,20 @@ if "%1"=="--vault-config" (
     exit /b 1
 )
 
-REM Validate vault config file
 if not exist "%VAULT_CONFIG%" (
     echo ❌ Error: Vault config file not found: %VAULT_CONFIG%
     exit /b 1
 )
 
-REM Add vault config to Java options
 set "JAVA_OPTS=%JAVA_OPTS% -Dvault.config=%VAULT_CONFIG%"
 set "FIRST_ARG=%1"
 if "%FIRST_ARG%"=="exec-proc" (
-    REM User explicitly specified exec-proc
     "%JAVA_CMD%" %JAVA_OPTS% -jar "%JAR_FILE%" %*
 ) else if "%FIRST_ARG%"=="exec-sql" (
-    REM User explicitly specified exec-sql
     "%JAVA_CMD%" %JAVA_OPTS% -jar "%JAR_FILE%" %*
 ) else if "%FIRST_ARG%"=="exec-vault" (
-    REM User explicitly specified exec-vault
     "%JAVA_CMD%" %JAVA_OPTS% -jar "%JAR_FILE%" %*
 ) else (
-    REM No subcommand specified, default to exec-proc
     "%JAVA_CMD%" %JAVA_OPTS% -jar "%JAR_FILE%" exec-proc %*
 )
-endlocal 
+endlocal

@@ -13,7 +13,7 @@ DB_TYPE="oracle"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 echo "${SCRIPT_DIR}"
 PROJECT_DIR="${SCRIPT_DIR}"
-DIST_DIR="${PROJECT_DIR}/cliutil/target/dist/cliutil-1.0.0"
+DIST_DIR="${PROJECT_DIR}/package-helper/target/dist/cliutil-1.0.0"
 DOCKER_DIR="${PROJECT_DIR}/docker"
 DOCKER_COMPOSE_FILE="${DOCKER_DIR}/docker-compose.yml"
 
@@ -93,8 +93,8 @@ build_project() {
 
 	cd "$PROJECT_DIR" || exit 1
 
-	echo "Running: mvn clean package -DskipTests -Pjava21jre"
-	if ! mvn clean package -DskipTests -Pjava21jre; then
+	echo "Running: mvn clean package -DskipTests -pl package-helper -am -Pbundle-jre"
+	if ! mvn clean package -DskipTests -pl package-helper -am -Pbundle-jre; then
 		echo "✗ Build failed"
 		exit 1
 	fi
@@ -111,9 +111,9 @@ unzip_distribution() {
 
 	cd "$PROJECT_DIR" || exit 1
 
-	# Prefer the dist zip produced by the assembly execution under cliutil/target/dist
-	ZIP_PATH="${PROJECT_DIR}/cliutil/target/dist/cliutil-1.0.0.zip"
-	ALT_ZIP_PATH="${PROJECT_DIR}/cliutil/target/cliutil-1.0.0.zip"
+	# Prefer the dist zip produced by package-helper assembly
+	ZIP_PATH="${PROJECT_DIR}/package-helper/target/dist/cliutil-1.0.0.zip"
+	ALT_ZIP_PATH="${PROJECT_DIR}/package-helper/target/cliutil-1.0.0.zip"
 
 	if [[ -f ${ZIP_PATH} ]]; then
 		echo "Unzipping: ${ZIP_PATH}"
@@ -126,7 +126,7 @@ unzip_distribution() {
 		exit 1
 	fi
 
-	OUTPUT_DIR="${PROJECT_DIR}/cliutil/target/dist"
+	OUTPUT_DIR="${PROJECT_DIR}/package-helper/target/dist"
 	mkdir -p "${OUTPUT_DIR}"
 
 	if ! unzip -o "${ZIP_TO_USE}" -d "${OUTPUT_DIR}"; then

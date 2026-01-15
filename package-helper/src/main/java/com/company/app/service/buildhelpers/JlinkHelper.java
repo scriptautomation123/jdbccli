@@ -50,7 +50,6 @@ public class JlinkHelper {
         }
         modules = modules.trim();
 
-        // Add required crypto modules if not already present
         String[] requiredCryptoModules = { "jdk.crypto.ec", "jdk.crypto.cryptoki" };
         StringBuilder modulesBuilder = new StringBuilder(modules);
         for (String cryptoModule : requiredCryptoModules) {
@@ -82,7 +81,6 @@ public class JlinkHelper {
             System.exit(5);
         }
 
-        // Copy Java security files to JRE
         System.out.println("[INFO] Copying Java security files to JRE..."); // NOSONAR
         copyJavaSecurityFiles(outputJreDir);
 
@@ -99,12 +97,10 @@ public class JlinkHelper {
     private static void copyJavaSecurityFiles(Path jreDir) throws IOException {
         Path jreLibSecurity = jreDir.resolve("lib").resolve("security");
 
-        // Ensure the security directory exists
         if (!Files.exists(jreLibSecurity)) {
             Files.createDirectories(jreLibSecurity);
         }
 
-        // Get JAVA_HOME from environment or system property
         String javaHome = System.getenv("JAVA_HOME");
         if (javaHome == null) {
             javaHome = System.getProperty("java.home");
@@ -115,21 +111,15 @@ public class JlinkHelper {
         if (Files.exists(sourceSecurityDir) && Files.isDirectory(sourceSecurityDir)) {
             System.out.println("[INFO] Copying Java security files from: " + sourceSecurityDir); // NOSONAR
 
-            // Copy all files from source security directory
             try (Stream<Path> stream = Files.walk(sourceSecurityDir)) {
                 stream.filter(Files::isRegularFile)
                         .forEach(sourceFile -> {
                             try {
                                 Path relativePath = sourceSecurityDir.relativize(sourceFile);
                                 Path targetFile = jreLibSecurity.resolve(relativePath);
-
-                                // Ensure target directory exists
                                 Files.createDirectories(targetFile.getParent());
-
-                                // Copy the file
                                 Files.copy(sourceFile, targetFile,
                                         java.nio.file.StandardCopyOption.REPLACE_EXISTING);
-
                                 System.out.println("[INFO] Copied: " + relativePath); // NOSONAR
                             } catch (IOException e) {
                                 System.err.println("Warning: Could not copy " + sourceFile + ": " + e.getMessage()); // NOSONAR
