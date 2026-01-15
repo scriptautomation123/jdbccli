@@ -11,16 +11,16 @@ DB_TYPE="oracle"
 
 # Project paths - find script location dynamically
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-echo $SCRIPT_DIR
+echo "${SCRIPT_DIR}"
 PROJECT_DIR="${SCRIPT_DIR}"
-DIST_DIR="$PROJECT_DIR/target/dist/cliutil-1.0.0"
-DOCKER_DIR="$PROJECT_DIR/docker"
-DOCKER_COMPOSE_FILE="$DOCKER_DIR/docker-compose.yml"
+DIST_DIR="${PROJECT_DIR}/cliutil/target/dist/cliutil-1.0.0"
+DOCKER_DIR="${PROJECT_DIR}/docker"
+DOCKER_COMPOSE_FILE="${DOCKER_DIR}/docker-compose.yml"
 
 # Function to verify docker-compose.yml exists
 verify_docker_compose() {
-	if [[ ! -f "$DOCKER_COMPOSE_FILE" ]]; then
-		echo "✗ ERROR: docker-compose.yml not found at $DOCKER_COMPOSE_FILE"
+	if [[ ! -f ${DOCKER_COMPOSE_FILE} ]]; then
+		echo "✗ ERROR: docker-compose.yml not found at ${DOCKER_COMPOSE_FILE}"
 		exit 1
 	fi
 }
@@ -71,7 +71,7 @@ setup_java_for_build() {
 	if command -v java &>/dev/null; then
 		local java_version
 		java_version=$(java -version 2>&1 | head -n 1 | awk -F '"' '{print $2}' | cut -d'.' -f1)
-		if [[ "$java_version" = "21" ]]; then
+		if [[ $java_version == "21" ]]; then
 			local java_path
 			java_path=$(command -v java)
 			JAVA_HOME="$(dirname "$(dirname "$(readlink -f "$java_path")")")"
@@ -94,7 +94,7 @@ build_project() {
 	cd "$PROJECT_DIR" || exit 1
 
 	echo "Running: mvn clean package -DskipTests -Pjava21jre"
-	if ! mvn clean package -DskipTests; then
+	if ! mvn clean package -DskipTests -Pjava21jre; then
 		echo "✗ Build failed"
 		exit 1
 	fi
@@ -111,8 +111,25 @@ unzip_distribution() {
 
 	cd "$PROJECT_DIR" || exit 1
 
-	echo "Unzipping: target/cliutil-1.0.0.zip"
-	if ! unzip -o target/cliutil-1.0.0.zip -d target/dist; then
+	# Prefer the dist zip produced by the assembly execution under cliutil/target/dist
+	ZIP_PATH="${PROJECT_DIR}/cliutil/target/dist/cliutil-1.0.0.zip"
+	ALT_ZIP_PATH="${PROJECT_DIR}/cliutil/target/cliutil-1.0.0.zip"
+
+	if [[ -f ${ZIP_PATH} ]]; then
+		echo "Unzipping: ${ZIP_PATH}"
+		ZIP_TO_USE="${ZIP_PATH}"
+	elif [[ -f ${ALT_ZIP_PATH} ]]; then
+		echo "Unzipping: ${ALT_ZIP_PATH}"
+		ZIP_TO_USE="${ALT_ZIP_PATH}"
+	else
+		echo "✗ ERROR: build artifact zip not found (looked for ${ZIP_PATH} and ${ALT_ZIP_PATH})"
+		exit 1
+	fi
+
+	OUTPUT_DIR="${PROJECT_DIR}/cliutil/target/dist"
+	mkdir -p "${OUTPUT_DIR}"
+
+	if ! unzip -o "${ZIP_TO_USE}" -d "${OUTPUT_DIR}"; then
 		echo "✗ Unzip failed"
 		exit 1
 	fi
@@ -134,7 +151,7 @@ find_java() {
 	if command -v java &>/dev/null; then
 		local java_version
 		java_version=$(java -version 2>&1 | head -n 1 | awk -F '"' '{print $2}' | cut -d'.' -f1)
-		if [[ "$java_version" = "21" ]]; then
+		if [[ $java_version == "21" ]]; then
 			echo "java"
 			return 0
 		fi
@@ -156,7 +173,7 @@ run_command() {
 	# Build arg array safely to preserve quoting and avoid globbing
 	local cli_args=("$@" --type "$DB_TYPE" --database "$DB_HOST" --user "$DB_USER")
 
-	if [[ -n "$DB_PASSWORD" ]]; then
+	if [[ -n $DB_PASSWORD ]]; then
 		if printf "%s\n" "$DB_PASSWORD" | "$JAVA_CMD" \
 			-Dlog4j.configurationFile=file:./log4j2.xml \
 			-Dvault.config=./vaults.yaml \
@@ -196,7 +213,7 @@ fi
 verify_docker_compose
 
 # Optionally refresh Oracle
-if [[ "$REFRESH_DB" = true ]]; then
+if [[ ${REFRESH_DB} == true ]]; then
 	refresh_oracle
 fi
 
