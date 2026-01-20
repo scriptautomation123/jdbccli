@@ -1,17 +1,17 @@
 vaults:
-  - id: "SOME_APP_ID"
-    base-url: "https://vault-lle.someplace.com"
-    role-id: "SOMEROLEID"
-    secret-id: "9080xlkvjkluwert"
-    ait: "76455654"
-    db: "SOMEDB_SVC01"
-  - id: "testuser"
-    base-url: "https://vault-lle.someplace.com"
-    role-id: "SOMEROLEID"
-    secret-id: "9080xlkvjkluwert"
-    ait: "76455654"
-  - id: "user2"
-    base-url: ""
-    role-id: ""
-    secret-id: ""
-    ait: ""
+  - id: SOME_APP_ID
+    base-url: https://vault-lle.someplace.com
+    role-id: SOMEROLEID
+    secret-id: 9080xlkvjkluwert
+    ait: 76455654
+    db: SOMEDB_SVC01
+  - id: testuser
+    base-url: https://vault-lle.someplace.com
+    role-id: SOMEROLEID
+    secret-id: 9080xlkvjkluwert
+    ait: 76455654
+  - id: user2
+    base-url:
+    role-id:
+    secret-id:
+    ait:

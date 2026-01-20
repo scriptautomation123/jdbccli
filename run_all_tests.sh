@@ -3,6 +3,9 @@
 # Exit on first failure
 set -e
 
+# Enable inherit_errexit for command substitutions
+shopt -s inherit_errexit
+
 # Database connection settings
 DB_PASSWORD="hr_password"
 DB_USER="hr"
