@@ -13,7 +13,7 @@ DB_TYPE="oracle"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 echo "${SCRIPT_DIR}"
 PROJECT_DIR="${SCRIPT_DIR}"
-DIST_DIR="${PROJECT_DIR}/package-helper/target/dist/cliutil-1.0.0"
+DIST_DIR="${PROJECT_DIR}/package-helper/target/dist/cli-1.0.0"
 DOCKER_DIR="${PROJECT_DIR}/docker"
 DOCKER_COMPOSE_FILE="${DOCKER_DIR}/docker-compose.yml"
 
@@ -33,7 +33,7 @@ refresh_oracle() {
 
 	verify_docker_compose
 
-	cd "$DOCKER_DIR" || exit 1
+	cd "${DOCKER_DIR}" || exit 1
 
 	echo "Removing containers and volumes..."
 	if ! docker compose down -v; then
@@ -47,7 +47,7 @@ refresh_oracle() {
 		exit 1
 	fi
 
-	cd "$PROJECT_DIR" || exit 1
+	cd "${PROJECT_DIR}" || exit 1
 
 	echo "✓ Oracle refreshed successfully"
 	echo "Waiting 40 seconds for Oracle initialization..."
@@ -60,23 +60,33 @@ setup_java_for_build() {
 	echo "Setting up Java for Maven build..."
 
 	# Check for Java 21 in SDKMAN
-	if [[ -d "$HOME/.sdkman/candidates/java/21-tem" ]]; then
-		export JAVA_HOME="$HOME/.sdkman/candidates/java/21-tem"
-		export PATH="$JAVA_HOME/bin:$PATH"
-		echo "✓ Using Java 21 from SDKMAN: $JAVA_HOME"
+	if [[ -d "${HOME}/.sdkman/candidates/java/21-tem" ]]; then
+		export JAVA_HOME="${HOME}/.sdkman/candidates/java/21-tem"
+		export PATH="${JAVA_HOME}/bin:${PATH}"
+		echo "✓ Using Java 21 from SDKMAN: ${JAVA_HOME}"
 		return 0
 	fi
 
 	# Check for Java 21 in PATH
 	if command -v java &>/dev/null; then
+		local java_version_output
+		local java_version_line
+		local java_version_full
 		local java_version
-		java_version=$(java -version 2>&1 | head -n 1 | awk -F '"' '{print $2}' | cut -d'.' -f1)
-		if [[ $java_version == "21" ]]; then
+		java_version_output=$(java -version 2>&1) || true
+		java_version_line=$(printf '%s' "${java_version_output}" | head -n 1) || true
+		java_version_full=$(printf '%s' "${java_version_line}" | awk -F '"' '{print $2}') || true
+		java_version=$(printf '%s' "${java_version_full}" | cut -d'.' -f1) || true
+		if [[ ${java_version} == "21" ]]; then
 			local java_path
+			local java_real_path
+			local java_bin_dir
 			java_path=$(command -v java)
-			JAVA_HOME="$(dirname "$(dirname "$(readlink -f "$java_path")")")"
+			java_real_path=$(readlink -f "${java_path}")
+			java_bin_dir=$(dirname "${java_real_path}")
+			JAVA_HOME=$(dirname "${java_bin_dir}")
 			export JAVA_HOME
-			echo "✓ Using Java 21 from PATH: $JAVA_HOME"
+			echo "✓ Using Java 21 from PATH: ${JAVA_HOME}"
 			return 0
 		fi
 	fi
@@ -91,7 +101,7 @@ build_project() {
 	echo "Building Project"
 	echo "========================================"
 
-	cd "$PROJECT_DIR" || exit 1
+	cd "${PROJECT_DIR}" || exit 1
 
 	echo "Running: mvn clean package -DskipTests -pl package-helper -am -Pbundle-jre"
 	if ! mvn clean package -DskipTests -pl package-helper -am -Pbundle-jre; then
@@ -109,11 +119,11 @@ unzip_distribution() {
 	echo "Extracting Distribution"
 	echo "========================================"
 
-	cd "$PROJECT_DIR" || exit 1
+	cd "${PROJECT_DIR}" || exit 1
 
 	# Prefer the dist zip produced by package-helper assembly
-	ZIP_PATH="${PROJECT_DIR}/package-helper/target/dist/cliutil-1.0.0.zip"
-	ALT_ZIP_PATH="${PROJECT_DIR}/package-helper/target/cliutil-1.0.0.zip"
+	ZIP_PATH="${PROJECT_DIR}/package-helper/target/dist/cli-1.0.0.zip"
+	ALT_ZIP_PATH="${PROJECT_DIR}/package-helper/target/cli-1.0.0.zip"
 
 	if [[ -f ${ZIP_PATH} ]]; then
 		echo "Unzipping: ${ZIP_PATH}"
@@ -149,9 +159,15 @@ find_java() {
 
 	# Check for Java 21 in PATH
 	if command -v java &>/dev/null; then
+		local java_version_output
+		local java_version_line
+		local java_version_full
 		local java_version
-		java_version=$(java -version 2>&1 | head -n 1 | awk -F '"' '{print $2}' | cut -d'.' -f1)
-		if [[ $java_version == "21" ]]; then
+		java_version_output=$(java -version 2>&1) || true
+		java_version_line=$(printf '%s' "${java_version_output}" | head -n 1) || true
+		java_version_full=$(printf '%s' "${java_version_line}" | awk -F '"' '{print $2}') || true
+		java_version=$(printf '%s' "${java_version_full}" | cut -d'.' -f1) || true
+		if [[ ${java_version} == "21" ]]; then
 			echo "java"
 			return 0
 		fi
@@ -167,17 +183,17 @@ run_command() {
 	shift
 
 	echo "----------------------------------------"
-	echo "Test: $test_name"
+	echo "Test: ${test_name}"
 	echo "----------------------------------------"
 
 	# Build arg array safely to preserve quoting and avoid globbing
-	local cli_args=("$@" --type "$DB_TYPE" --database "$DB_HOST" --user "$DB_USER")
+	local cli_args=("$@" --type "${DB_TYPE}" --database "${DB_HOST}" --user "${DB_USER}")
 
-	if [[ -n $DB_PASSWORD ]]; then
-		if printf "%s\n" "$DB_PASSWORD" | "$JAVA_CMD" \
+	if [[ -n ${DB_PASSWORD} ]]; then
+		if printf "%s\n" "${DB_PASSWORD}" | "${JAVA_CMD}" \
 			-Dlog4j.configurationFile=file:./log4j2.xml \
 			-Dvault.config=./vaults.yaml \
-			-jar ./cliutil-1.0.0.jar \
+			-jar ./cli-1.0.0.jar \
 			"${cli_args[@]}"; then
 			echo "✓ PASSED"
 		else
@@ -185,10 +201,10 @@ run_command() {
 			exit 1
 		fi
 	else
-		if "$JAVA_CMD" \
+		if "${JAVA_CMD}" \
 			-Dlog4j.configurationFile=file:./log4j2.xml \
 			-Dvault.config=./vaults.yaml \
-			-jar ./cliutil-1.0.0.jar \
+			-jar ./cli-1.0.0.jar \
 			"${cli_args[@]}"; then
 			echo "✓ PASSED"
 		else
@@ -205,7 +221,7 @@ run_command() {
 
 # Check for --refresh flag
 REFRESH_DB=false
-if [[ $1 == "--refresh" ]]; then
+if [[ ${1} == "--refresh" ]]; then
 	REFRESH_DB=true
 fi
 
@@ -227,7 +243,7 @@ build_project
 unzip_distribution
 
 # Step 4: Change to distribution directory
-cd "$DIST_DIR" || exit 1
+cd "${DIST_DIR}" || exit 1
 
 # Step 5: Find Java runtime
 JAVA_CMD=$(find_java)

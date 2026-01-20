@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <parent>
-    <artifactId>cliutil-parent</artifactId>
+    <artifactId>cli-parent</artifactId>
     <groupId>com.company.app.service</groupId>
     <version>1.0.0</version>
   </parent>
@@ -9,7 +9,7 @@
   <artifactId>package-helper</artifactId>
   <name>Package Helper</name>
   <build>
-    <finalName>cliutil-${project.version}</finalName>
+    <finalName>cli-${project.version}</finalName>
     <plugins>
       <plugin>
         <artifactId>maven-compiler-plugin</artifactId>

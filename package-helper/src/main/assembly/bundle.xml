@@ -34,7 +34,7 @@
         </fileSet>
 
         <fileSet>
-            <directory>${project.parent.basedir}/cliutil/src/main/resources</directory>
+            <directory>${project.parent.basedir}/cli/src/main/resources</directory>
             <outputDirectory>/</outputDirectory>
             <includes>
                 <include>application.yaml</include>

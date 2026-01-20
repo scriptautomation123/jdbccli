@@ -1,18 +1,16 @@
 package com.company.app.service.util;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.net.HttpURLConnection;
 import java.net.URI;
-import java.net.URL;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -72,27 +70,36 @@ public final class VaultClient implements AutoCloseable {
   private static final String CONTENT_TYPE_JSON = "application/json";
 
   /** Vault token header name */
-  private static final String VAULT_TOKEN_HEADER = "x-vault-token";
+  private static final String VAULT_TOKEN_HEADER = "X-Vault-Token";
 
-  /** Socket timeout in milliseconds */
-  private static final int SOCKET_TIMEOUT_MS = 2000;
+  /** Request timeout duration */
+  private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(2);
 
-  /** Connection request timeout in milliseconds */
-  private static final int CONNECTION_REQUEST_TIMEOUT_MS = 2000;
+  /** Connect timeout duration */
+  private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(2);
 
   /** JSON object mapper for parsing responses */
   private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
+  /** Java 21 built-in HTTP client - thread-safe and reusable */
+  private final HttpClient httpClient;
+
   /**
-   * Constructs a new VaultClient.
-   * Initializes client for Vault API interactions.
+   * Constructs a new VaultClient using Java 21's built-in HttpClient.
+   * The client is configured with connection timeouts and HTTP/1.1 protocol.
    */
   public VaultClient() {
+    this.httpClient = HttpClient.newBuilder()
+        .version(HttpClient.Version.HTTP_1_1)
+        .connectTimeout(CONNECT_TIMEOUT)
+        .followRedirects(HttpClient.Redirect.NORMAL)
+        .build();
+
     LoggingUtils.logStructuredError(
         VAULT_CLIENT,
         "initialize",
         SUCCESS,
-        "VaultClient initialized with HttpURLConnection and 2s timeouts",
+        "VaultClient initialized with Java 21 HttpClient and 2s timeouts",
         null);
   }
 
@@ -140,16 +147,16 @@ public final class VaultClient implements AutoCloseable {
       final String secretId = (String) params.get("secret-id");
       final String ait = (String) params.get("ait");
 
-      if (!isValidParameter(vaultBaseUrl, "base-url", user)) {
+      if (isInvalidParameter(vaultBaseUrl, "base-url", user)) {
         return null;
       }
-      if (!isValidParameter(roleId, "role-id", user)) {
+      if (isInvalidParameter(roleId, "role-id", user)) {
         return null;
       }
-      if (!isValidParameter(secretId, "secret-id", user)) {
+      if (isInvalidParameter(secretId, "secret-id", user)) {
         return null;
       }
-      if (!isValidParameter(ait, "ait", user)) {
+      if (isInvalidParameter(ait, "ait", user)) {
         return null;
       }
 
@@ -167,14 +174,14 @@ public final class VaultClient implements AutoCloseable {
   }
 
   /**
-   * Validates if a parameter is not null and not empty.
-   * 
+   * Validates if a parameter is null or empty.
+   *
    * @param paramName  the parameter name for logging
    * @param paramValue the parameter value to validate
    * @param user       the username for logging
-   * @return true if parameter is valid, false otherwise
+   * @return true if parameter is invalid, false otherwise
    */
-  private boolean isValidParameter(final String paramValue, final String paramName, final String user) {
+  private boolean isInvalidParameter(final String paramValue, final String paramName, final String user) {
     if (paramValue == null || paramValue.isBlank()) {
       LoggingUtils.logStructuredError(
           VAULT_OPERATION,
@@ -182,9 +189,9 @@ public final class VaultClient implements AutoCloseable {
           MISSING_PARAM,
           "Missing required vault parameter '" + paramName + "' for user: " + user,
           null);
-      return false;
+      return true;
     }
-    return true;
+    return false;
   }
 
   /**
@@ -239,8 +246,7 @@ public final class VaultClient implements AutoCloseable {
 
     final YamlConfig config = new YamlConfig(vaultConfigPath);
     final Object vaultsObj = config.getAll().get("vaults");
-    if (vaultsObj instanceof List<?>) {
-      final List<?> vaultsList = (List<?>) vaultsObj;
+    if (vaultsObj instanceof List<?> vaultsList) {
       for (final Object entry : vaultsList) {
         final Map<String, Object> result = tryGetVaultEntry(entry, user, database);
         if (!result.isEmpty()) {
@@ -267,8 +273,7 @@ public final class VaultClient implements AutoCloseable {
    */
   @SuppressWarnings("unchecked")
   private static Map<String, Object> tryGetVaultEntry(final Object entry, final String user, final String database) {
-    if (entry instanceof Map<?, ?>) {
-      final Map<?, ?> map = (Map<?, ?>) entry;
+    if (entry instanceof Map<?, ?> map) {
       final Object entryId = map.get("id");
       final Object entryDb = map.get("db");
 
@@ -303,12 +308,7 @@ public final class VaultClient implements AutoCloseable {
    * @return true if all keys are strings
    */
   private static boolean hasStringKeys(final Map<?, ?> map) {
-    for (final Object key : map.keySet()) {
-      if (!(key instanceof String)) {
-        return false;
-      }
-    }
-    return true;
+    return map.keySet().stream().allMatch(String.class::isInstance);
   }
 
   /**
@@ -318,17 +318,16 @@ public final class VaultClient implements AutoCloseable {
    * @param roleId       the role ID
    * @param secretId     the secret ID
    * @return the client token
-   * @throws IOException if authentication fails
+   * @throws IOException          if authentication fails
+   * @throws InterruptedException if the request is interrupted
    */
   private String authenticateToVault(final String vaultBaseUrl, final String roleId, final String secretId)
-      throws IOException {
+      throws IOException, InterruptedException {
     final String authUrl = vaultBaseUrl + "/v1/auth/approle/login";
     final String authBody = String.format("{\"role_id\":\"%s\",\"secret_id\":\"%s\"}", roleId, secretId);
 
     LoggingUtils.logVaultAuthentication(authUrl, STARTED);
-    final Map<String, String> headers = new ConcurrentHashMap<>();
-    headers.put("Content-Type", CONTENT_TYPE_JSON);
-    final String response = httpPost(authUrl, headers, authBody);
+    final String response = httpPost(authUrl, null, authBody);
 
     final String clientToken = parseJsonField(response, CLIENT_TOKEN_PATH);
     if (clientToken == null || clientToken.isEmpty()) {
@@ -348,81 +347,59 @@ public final class VaultClient implements AutoCloseable {
    * @param ait          the AIT identifier
    * @param username     the username
    * @return the password response
-   * @throws IOException if the request fails
+   * @throws IOException          if the request fails
+   * @throws InterruptedException if the request is interrupted
    */
   private String fetchOraclePasswordSync(
-      final String vaultBaseUrl, final String clientToken, final String dbName, final String ait, final String username)
-      throws IOException {
+      final String vaultBaseUrl,
+      final String clientToken,
+      final String dbName,
+      final String ait,
+      final String username)
+      throws IOException, InterruptedException {
     final String secretPath = String.format(
         "%s/v1/secrets/database/oracle/static-creds/%s-%s-%s",
         vaultBaseUrl, ait, dbName, username)
         .toLowerCase(Locale.ROOT);
 
     LoggingUtils.logVaultOperation(FETCH_PASSWORD, username, STARTED);
-    final Map<String, String> headers = new ConcurrentHashMap<>();
-    headers.put(VAULT_TOKEN_HEADER, clientToken);
-    final String response = httpGet(secretPath, headers);
+    final String response = httpGet(secretPath, clientToken);
     LoggingUtils.logVaultOperation(FETCH_PASSWORD, username, SUCCESS);
     return response;
   }
 
   /**
-   * Performs HTTP GET request to the specified URL.
+   * Performs HTTP GET request using Java 21's HttpClient.
    * 
-   * @param url     the URL to request
-   * @param headers the headers to include
+   * @param url        the URL to request
+   * @param vaultToken the Vault token for authentication (may be null)
    * @return the response body
-   * @throws IOException if the request fails
+   * @throws IOException          if the request fails
+   * @throws InterruptedException if the request is interrupted
    */
-  private String httpGet(final String url, final Map<String, String> headers) throws IOException {
-    final URL urlObj = URI.create(url).toURL();
-    final HttpURLConnection connection = (HttpURLConnection) urlObj.openConnection();
-    connection.setRequestMethod("GET");
-    connection.setConnectTimeout(CONNECTION_REQUEST_TIMEOUT_MS);
-    connection.setReadTimeout(SOCKET_TIMEOUT_MS);
+  private String httpGet(final String url, final String vaultToken) throws IOException, InterruptedException {
+    final HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
+        .uri(URI.create(url))
+        .timeout(REQUEST_TIMEOUT)
+        .GET();
 
-    for (final Map.Entry<String, String> header : headers.entrySet()) {
-      connection.setRequestProperty(header.getKey(), header.getValue());
+    if (vaultToken != null) {
+      requestBuilder.header(VAULT_TOKEN_HEADER, vaultToken);
     }
 
-    final int statusCode = connection.getResponseCode();
+    final HttpRequest request = requestBuilder.build();
+    final HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
+    final int statusCode = response.statusCode();
     if (statusCode >= HTTP_CLIENT_ERROR) {
-      final String responseBody = readResponseBody(connection);
-      final String detailedError = parseVaultError(responseBody, statusCode);
+      final String detailedError = parseVaultError(response.body(), statusCode);
       final String errorMessage = "Vault HTTP GET failed: " + statusCode + ERROR_SEPARATOR + detailedError;
 
-      LoggingUtils.logStructuredError(
-          VAULT_CLIENT,
-          "http_get",
-          FAILED,
-          errorMessage,
-          null);
+      LoggingUtils.logStructuredError(VAULT_CLIENT, "http_get", FAILED, errorMessage, null);
       throw new ExceptionUtils.ConfigurationException(errorMessage);
     }
 
-    return readResponseBody(connection);
-  }
-
-  /**
-   * Helper method to read response body from HttpURLConnection.
-   * 
-   * @param connection the HTTP connection
-   * @return the response body as string
-   * @throws IOException if reading fails
-   */
-  private String readResponseBody(final HttpURLConnection connection) throws IOException {
-    final InputStream inputStream = connection.getErrorStream() != null ? connection.getErrorStream()
-        : connection.getInputStream();
-
-    try (BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream))) {
-      final StringBuilder response = new StringBuilder();
-      String line;
-      while ((line = reader.readLine()) != null) {
-        response.append(line);
-      }
-      return response.toString();
-    }
+    return response.body();
   }
 
   /**
@@ -459,50 +436,40 @@ public final class VaultClient implements AutoCloseable {
   }
 
   /**
-   * Performs HTTP POST request to the specified URL.
+   * Performs HTTP POST request using Java 21's HttpClient.
    * 
-   * @param url     the URL to request
-   * @param headers the headers to include
-   * @param body    the request body
+   * @param url        the URL to request
+   * @param vaultToken the Vault token for authentication (may be null)
+   * @param body       the request body
    * @return the response body
-   * @throws IOException if the request fails
+   * @throws IOException          if the request fails
+   * @throws InterruptedException if the request is interrupted
    */
-  private String httpPost(final String url, final Map<String, String> headers, final String body) throws IOException {
-    final URL urlObj = URI.create(url).toURL();
-    final HttpURLConnection connection = (HttpURLConnection) urlObj.openConnection();
-    connection.setRequestMethod("POST");
-    connection.setConnectTimeout(CONNECTION_REQUEST_TIMEOUT_MS);
-    connection.setReadTimeout(SOCKET_TIMEOUT_MS);
-    connection.setDoOutput(true);
+  private String httpPost(final String url, final String vaultToken, final String body)
+      throws IOException, InterruptedException {
+    final HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
+        .uri(URI.create(url))
+        .timeout(REQUEST_TIMEOUT)
+        .header("Content-Type", CONTENT_TYPE_JSON)
+        .POST(HttpRequest.BodyPublishers.ofString(body, StandardCharsets.UTF_8));
 
-    for (final Map.Entry<String, String> header : headers.entrySet()) {
-      connection.setRequestProperty(header.getKey(), header.getValue());
+    if (vaultToken != null) {
+      requestBuilder.header(VAULT_TOKEN_HEADER, vaultToken);
     }
 
-    if (body != null) {
-      try (OutputStream outputStream = connection.getOutputStream()) {
-        outputStream.write(body.getBytes("UTF-8"));
-        outputStream.flush();
-      }
-    }
+    final HttpRequest request = requestBuilder.build();
+    final HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
-    final int statusCode = connection.getResponseCode();
-
+    final int statusCode = response.statusCode();
     if (statusCode >= HTTP_CLIENT_ERROR) {
-      final String responseBody = readResponseBody(connection);
-      final String detailedError = parseVaultError(responseBody, statusCode);
+      final String detailedError = parseVaultError(response.body(), statusCode);
       final String errorMessage = "Vault HTTP POST failed: " + statusCode + ERROR_SEPARATOR + detailedError;
 
-      LoggingUtils.logStructuredError(
-          VAULT_CLIENT,
-          "http_post",
-          FAILED,
-          errorMessage,
-          null);
+      LoggingUtils.logStructuredError(VAULT_CLIENT, "http_post", FAILED, errorMessage, null);
       throw new ExceptionUtils.ConfigurationException(errorMessage);
     }
 
-    return readResponseBody(connection);
+    return response.body();
   }
 
   /**
@@ -555,11 +522,13 @@ public final class VaultClient implements AutoCloseable {
     }
   }
 
+  /**
+   * Closes the VaultClient. The underlying HttpClient doesn't require explicit
+   * closing in Java 21, but this method is kept for interface compliance.
+   */
   @Override
-  public void close() throws IOException {
+  public void close() {
     LoggingUtils.logStructuredError(
-        VAULT_CLIENT, CLOSE_OPERATION, STARTED, "Closing VaultClient HTTP client", null);
-    LoggingUtils.logStructuredError(
-        VAULT_CLIENT, CLOSE_OPERATION, SUCCESS, "VaultClient HTTP client closed successfully", null);
+        VAULT_CLIENT, CLOSE_OPERATION, SUCCESS, "VaultClient closed", null);
   }
 }

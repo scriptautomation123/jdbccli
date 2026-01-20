@@ -1,6 +1,5 @@
 package com.company.app.service.auth;
 
-import java.io.IOException;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Supplier;
@@ -101,7 +100,7 @@ public class PasswordResolver {
       }
 
       return result;
-    } catch (IOException e) {
+    } catch (Exception e) {
       LoggingUtils.logStructuredError(
           PWD_RESOLUTION,
           DIRECT_VAULT,
@@ -139,7 +138,7 @@ public class PasswordResolver {
       }
 
       return result;
-    } catch (IOException e) {
+    } catch (Exception e) {
       LoggingUtils.logStructuredError(
           PWD_RESOLUTION,
           DIRECT_VAULT,

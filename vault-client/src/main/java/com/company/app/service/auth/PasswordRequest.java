@@ -9,71 +9,43 @@ import com.company.app.service.util.LoggingUtils;
  * Supports both vault lookup mode (user/database only) and direct vault
  * parameter mode.
  * Validates that vault parameters are either all provided or none provided.
+ *
+ * @param user     database username for authentication
+ * @param database database name for connection
+ * @param vaultUrl vault server URL for authentication
+ * @param roleId   vault role ID for authentication
+ * @param secretId vault secret ID for authentication
+ * @param ait      application identifier token for vault
  */
-public final class PasswordRequest {
-
-  /** Database username for authentication */
-  private final String user;
-
-  /** Database name for connection */
-  private final String database;
-
-  /** Vault server URL for authentication */
-  private final String vaultUrl;
-
-  /** Vault role ID for authentication */
-  private final String roleId;
-
-  /** Vault secret ID for authentication */
-  private final String secretId;
-
-  /** Application identifier token for vault */
-  private final String ait;
+public record PasswordRequest(
+    String user,
+    String database,
+    String vaultUrl,
+    String roleId,
+    String secretId,
+    String ait) {
 
   private static final String ERROR_CONTEXT = "password_request";
   private static final String NO_VAULT_PARAMS_ERROR = "NO_VAULT_PARAMS";
   private static final String NO_VAULT_PARAMS_MESSAGE = "Vault parameters not available - direct vault params not provided";
 
   /**
-   * Constructs a PasswordRequest for vault lookup mode.
-   * 
-   * @param user     database username
-   * @param database database name
+   * Compact constructor with validation.
    */
-  public PasswordRequest(final String user, final String database) {
-    this(user, database, null, null, null, null);
+  public PasswordRequest {
+    user = Objects.requireNonNull(user, "User cannot be null");
+    database = Objects.requireNonNull(database, "Database cannot be null");
+
+    validateVaultParameters(vaultUrl, roleId, secretId, ait);
   }
 
-  /**
-   * Constructs a PasswordRequest with direct vault parameters.
-   * 
-   * @param user     database username
-   * @param database database name
-   * @param vaultUrl vault server URL
-   * @param roleId   vault role ID
-   * @param secretId vault secret ID
-   * @param ait      application identifier token
-   */
-  public PasswordRequest(
-      final String user,
-      final String database,
+  private static void validateVaultParameters(
       final String vaultUrl,
       final String roleId,
       final String secretId,
       final String ait) {
-    this.user = Objects.requireNonNull(user, "User cannot be null");
-    this.database = Objects.requireNonNull(database, "Database cannot be null");
-    this.vaultUrl = vaultUrl;
-    this.roleId = roleId;
-    this.secretId = secretId;
-    this.ait = ait;
-
-    validateVaultParameters();
-  }
-
-  private void validateVaultParameters() {
-    final boolean hasSomeVaultParams = hasAnyVaultParams();
-    final boolean hasAllVaultParams = hasDirectVaultParams();
+    final boolean hasSomeVaultParams = hasAnyVaultParams(vaultUrl, roleId, secretId, ait);
+    final boolean hasAllVaultParams = hasAllDirectVaultParams(vaultUrl, roleId, secretId, ait);
 
     if (hasSomeVaultParams && !hasAllVaultParams) {
       LoggingUtils.logStructuredError(
@@ -87,16 +59,28 @@ public final class PasswordRequest {
     }
   }
 
-  private boolean hasAnyVaultParams() {
+  private static boolean hasAnyVaultParams(
+      final String vaultUrl,
+      final String roleId,
+      final String secretId,
+      final String ait) {
     return vaultUrl != null || roleId != null || secretId != null || ait != null;
   }
 
   /**
    * Checks if all direct vault parameters are provided and non-empty.
-   * 
+   *
    * @return true if all vault parameters are present and non-empty
    */
   public boolean hasDirectVaultParams() {
+    return hasAllDirectVaultParams(vaultUrl, roleId, secretId, ait);
+  }
+
+  private static boolean hasAllDirectVaultParams(
+      final String vaultUrl,
+      final String roleId,
+      final String secretId,
+      final String ait) {
     return isNonEmpty(vaultUrl) && isNonEmpty(roleId) && isNonEmpty(secretId) && isNonEmpty(ait);
   }
 
@@ -106,7 +90,7 @@ public final class PasswordRequest {
 
   /**
    * Gets the database username.
-   * 
+   *
    * @return the username
    */
   public String getUser() {
@@ -115,7 +99,7 @@ public final class PasswordRequest {
 
   /**
    * Gets the database name.
-   * 
+   *
    * @return the database name
    */
   public String getDatabase() {
@@ -124,7 +108,7 @@ public final class PasswordRequest {
 
   /**
    * Gets the vault URL if direct vault parameters are provided.
-   * 
+   *
    * @return the vault URL
    * @throws IllegalStateException if direct vault parameters are not provided
    */
@@ -135,7 +119,7 @@ public final class PasswordRequest {
 
   /**
    * Gets the vault role ID if direct vault parameters are provided.
-   * 
+   *
    * @return the role ID
    * @throws IllegalStateException if direct vault parameters are not provided
    */
@@ -146,7 +130,7 @@ public final class PasswordRequest {
 
   /**
    * Gets the vault secret ID if direct vault parameters are provided.
-   * 
+   *
    * @return the secret ID
    * @throws IllegalStateException if direct vault parameters are not provided
    */
@@ -158,7 +142,7 @@ public final class PasswordRequest {
   /**
    * Gets the application identifier token if direct vault parameters are
    * provided.
-   * 
+   *
    * @return the AIT
    * @throws IllegalStateException if direct vault parameters are not provided
    */

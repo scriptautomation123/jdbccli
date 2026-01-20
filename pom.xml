@@ -3,16 +3,17 @@
     xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.company.app.service</groupId>
-    <artifactId>cliutil-parent</artifactId>
+    <artifactId>cli-parent</artifactId>
     <version>1.0.0</version>
     <packaging>pom</packaging>
     <name>Util CLI Parent</name>
 
     <modules>
-        <module>bom</module>
-        <module>core</module>
+        <module>domain</module>
+        <module>util</module>
         <module>vault-client</module>
-        <module>cliutil</module>
+        <module>database</module>
+        <module>cli</module>
         <module>package-helper</module>
     </modules>
 
@@ -22,25 +23,52 @@
         <maven.compiler.release>21</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
+        <!-- Dependency versions -->
+        <log4j2.version>2.25.3</log4j2.version>
+        <jackson.version>2.19.2</jackson.version>
+        <oracle.jdbc.version>23.8.0.25.04</oracle.jdbc.version>
+        <picocli.version>4.7.7</picocli.version>
+
+        <!-- Plugin versions -->
         <shade.plugin.version>3.6.0</shade.plugin.version>
         <exec.plugin.version>3.5.1</exec.plugin.version>
         <assembly.plugin.version>3.7.1</assembly.plugin.version>
-
         <maven.compiler.plugin.version>3.14.0</maven.compiler.plugin.version>
         <maven.enforcer.plugin.version>3.6.1</maven.enforcer.plugin.version>
         <maven.surefire.plugin.version>3.2.5</maven.surefire.plugin.version>
         <versions.plugin.version>2.18.0</versions.plugin.version>
         <spotless.plugin.version>2.44.0</spotless.plugin.version>
+        <cyclonedx.plugin.version>2.9.1</cyclonedx.plugin.version>
     </properties>
 
     <dependencyManagement>
         <dependencies>
+            <!-- BOMs for version management -->
             <dependency>
-                <groupId>com.company.app.service</groupId>
-                <artifactId>cliutil-bom</artifactId>
-                <version>${project.version}</version>
+                <groupId>org.apache.logging.log4j</groupId>
+                <artifactId>log4j-bom</artifactId>
+                <version>${log4j2.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>com.fasterxml.jackson</groupId>
+                <artifactId>jackson-bom</artifactId>
+                <version>${jackson.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+            <!-- Dependencies without official BOMs -->
+            <dependency>
+                <groupId>com.oracle.database.jdbc</groupId>
+                <artifactId>ojdbc8</artifactId>
+                <version>${oracle.jdbc.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>info.picocli</groupId>
+                <artifactId>picocli</artifactId>
+                <version>${picocli.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
@@ -77,6 +105,24 @@
                     <groupId>com.diffplug.spotless</groupId>
                     <artifactId>spotless-maven-plugin</artifactId>
                     <version>${spotless.plugin.version}</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.cyclonedx</groupId>
+                    <artifactId>cyclonedx-maven-plugin</artifactId>
+                    <version>${cyclonedx.plugin.version}</version>
+                    <configuration>
+                        <projectType>application</projectType>
+                        <schemaVersion>1.5</schemaVersion>
+                        <includeBomSerialNumber>true</includeBomSerialNumber>
+                        <includeCompileScope>true</includeCompileScope>
+                        <includeProvidedScope>true</includeProvidedScope>
+                        <includeRuntimeScope>true</includeRuntimeScope>
+                        <includeSystemScope>false</includeSystemScope>
+                        <includeTestScope>false</includeTestScope>
+                        <includeLicenseText>false</includeLicenseText>
+                        <outputFormat>all</outputFormat>
+                        <outputName>sbom</outputName>
+                    </configuration>
                 </plugin>
             </plugins>
         </pluginManagement>

@@ -1,12 +1,19 @@
 cd docker && docker compose down -v && docker compose up -d && cd ..
 ./run_all_tests.sh
 
+# Generate aggregate SBOM for all modules
+mvn cyclonedx:makeAggregateBom
+
+# Or generate SBOM for individual modules
+mvn cyclonedx:makeBom
+
+
 ```bash
-cd ~/code/scriptautomation123/jdbccli/target/dist/cliutil-1.0.0 &&\
+cd ~/code/scriptautomation123/jdbccli/target/dist/cli-1.0.0 &&\
 ./jre/bin/java \
 -Dlog4j.configurationFile=file:./log4j2.xml \
 -Dvault.config=./vaults.yaml \
--jar ./cliutil-1.0.0.jar exec-sql "SELECT * FROM hr.employees WHERE rownum <= 5" \
+-jar ./cli-1.0.0.jar exec-sql "SELECT * FROM hr.employees WHERE rownum <= 5" \
 --type oracle \
 --database localhost:1521:xe \
 --user hr
@@ -15,11 +22,11 @@ cd ~/code/scriptautomation123/jdbccli/target/dist/cliutil-1.0.0 &&\
 # 1. Get employee salary (use SQL, not procedure)
 
 ```bash
-cd ~/code/scriptautomation123/jdbccli/target/dist/cliutil-1.0.0 &&\
+cd ~/code/scriptautomation123/jdbccli/target/dist/cli-1.0.0 &&\
 ./jre/bin/java \
 -Dlog4j.configurationFile=file:./log4j2.xml \
 -Dvault.config=./vaults.yaml \
--jar ./cliutil-1.0.0.jar exec-sql "SELECT hr.hr_pkg.get_employee_salary(100) as salary FROM dual" \
+-jar ./cli-1.0.0.jar exec-sql "SELECT hr.hr_pkg.get_employee_salary(100) as salary FROM dual" \
 --type oracle \
 --database localhost:1521:xe \
 --user hr
@@ -28,11 +35,11 @@ cd ~/code/scriptautomation123/jdbccli/target/dist/cliutil-1.0.0 &&\
 # 2. Get department budget (use SQL)
 
 ```bash
-cd ~/code/scriptautomation123/jdbccli/target/dist/cliutil-1.0.0 &&\
+cd ~/code/scriptautomation123/jdbccli/target/dist/cli-1.0.0 &&\
 ./jre/bin/java \
 -Dlog4j.configurationFile=file:./log4j2.xml \
 -Dvault.config=./vaults.yaml \
--jar ./cliutil-1.0.0.jar exec-sql "SELECT hr.hr_pkg.get_department_budget(80) as budget FROM dual" \
+-jar ./cli-1.0.0.jar exec-sql "SELECT hr.hr_pkg.get_department_budget(80) as budget FROM dual" \
 --type oracle \
 --database localhost:1521:xe \
 --user hr
@@ -41,11 +48,11 @@ cd ~/code/scriptautomation123/jdbccli/target/dist/cliutil-1.0.0 &&\
 # 3. Calculate bonus (use SQL)
 
 ```bash
-cd ~/code/scriptautomation123/jdbccli/target/dist/cliutil-1.0.0 &&\
+cd ~/code/scriptautomation123/jdbccli/target/dist/cli-1.0.0 &&\
 ./jre/bin/java \
 -Dlog4j.configurationFile=file:./log4j2.xml \
 -Dvault.config=./vaults.yaml \
--jar ./cliutil-1.0.0.jar exec-sql "SELECT hr.calculate_bonus(10000, 15) as bonus FROM dual" \
+-jar ./cli-1.0.0.jar exec-sql "SELECT hr.calculate_bonus(10000, 15) as bonus FROM dual" \
 --type oracle \
 --database localhost:1521:xe \
 --user hr
@@ -54,11 +61,11 @@ cd ~/code/scriptautomation123/jdbccli/target/dist/cliutil-1.0.0 &&\
 # 4. Get employee details (procedure with input parameter)
 
 ```bash
-cd ~/code/scriptautomation123/jdbccli/target/dist/cliutil-1.0.0 &&\
+cd ~/code/scriptautomation123/jdbccli/target/dist/cli-1.0.0 &&\
 ./jre/bin/java \
 -Dlog4j.configurationFile=file:./log4j2.xml \
 -Dvault.config=./vaults.yaml \
--jar ./cliutil-1.0.0.jar exec-proc hr.get_employee_details \
+-jar ./cli-1.0.0.jar exec-proc hr.get_employee_details \
 --input "p_employee_id:NUMBER:100" \
 --type oracle \
 --database localhost:1521:xe \
@@ -68,11 +75,11 @@ cd ~/code/scriptautomation123/jdbccli/target/dist/cliutil-1.0.0 &&\
 # 5. Get department info (procedure with input parameter)
 
 ```bash
-cd ~/code/scriptautomation123/jdbccli/target/dist/cliutil-1.0.0 &&\
+cd ~/code/scriptautomation123/jdbccli/target/dist/cli-1.0.0 &&\
 ./jre/bin/java \
 -Dlog4j.configurationFile=file:./log4j2.xml \
 -Dvault.config=./vaults.yaml \
--jar ./cliutil-1.0.0.jar exec-proc hr.get_department_info \
+-jar ./cli-1.0.0.jar exec-proc hr.get_department_info \
 --input "p_department_id:NUMBER:80" \
 --type oracle \
 --database localhost:1521:xe \
@@ -82,11 +89,11 @@ cd ~/code/scriptautomation123/jdbccli/target/dist/cliutil-1.0.0 &&\
 # 6. Raise employee salary (package procedure with multiple inputs)
 
 ```bash
-cd ~/code/scriptautomation123/jdbccli/target/dist/cliutil-1.0.0 &&\
+cd ~/code/scriptautomation123/jdbccli/target/dist/cli-1.0.0 &&\
 ./jre/bin/java \
 -Dlog4j.configurationFile=file:./log4j2.xml \
 -Dvault.config=./vaults.yaml \
--jar ./cliutil-1.0.0.jar exec-proc hr.hr_pkg.raise_employee_salary \
+-jar ./cli-1.0.0.jar exec-proc hr.hr_pkg.raise_employee_salary \
 --input "p_employee_id:NUMBER:100,p_raise_percent:NUMBER:10" \
 --type oracle \
 --database localhost:1521:xe \
@@ -96,11 +103,11 @@ cd ~/code/scriptautomation123/jdbccli/target/dist/cliutil-1.0.0 &&\
 # 7. Hire new employee (package procedure with 6 input parameters)
 
 ```bash
-cd ~/code/scriptautomation123/jdbccli/target/dist/cliutil-1.0.0 &&\
+cd ~/code/scriptautomation123/jdbccli/target/dist/cli-1.0.0 &&\
 ./jre/bin/java \
 -Dlog4j.configurationFile=file:./log4j2.xml \
 -Dvault.config=./vaults.yaml \
--jar ./cliutil-1.0.0.jar exec-proc hr.hr_pkg.hire_employee \
+-jar ./cli-1.0.0.jar exec-proc hr.hr_pkg.hire_employee \
 --input "p_first_name:VARCHAR2:John,p_last_name:VARCHAR2:Doe,p_email:VARCHAR2:jdoe@example.com,p_job_id:VARCHAR2:IT_PROG,p_salary:NUMBER:8000,p_department_id:NUMBER:60" \
 --type oracle \
 --database localhost:1521:xe \
@@ -110,11 +117,11 @@ cd ~/code/scriptautomation123/jdbccli/target/dist/cliutil-1.0.0 &&\
 # 8. Update job history (package procedure with 3 input parameters)
 
 ```bash
-cd ~/code/scriptautomation123/jdbccli/target/dist/cliutil-1.0.0 &&\
+cd ~/code/scriptautomation123/jdbccli/target/dist/cli-1.0.0 &&\
 ./jre/bin/java \
 -Dlog4j.configurationFile=file:./log4j2.xml \
 -Dvault.config=./vaults.yaml \
--jar ./cliutil-1.0.0.jar exec-proc hr.hr_pkg.update_job_history \
+-jar ./cli-1.0.0.jar exec-proc hr.hr_pkg.update_job_history \
 --input "p_employee_id:NUMBER:100,p_new_job_id:VARCHAR2:AD_VP,p_new_department_id:NUMBER:90" \
 --type oracle \
 --database localhost:1521:xe \
@@ -124,11 +131,11 @@ cd ~/code/scriptautomation123/jdbccli/target/dist/cliutil-1.0.0 &&\
 # 9. Terminate employee (package procedure with 1 input parameter)
 
 ```bash
-cd ~/code/scriptautomation123/jdbccli/target/dist/cliutil-1.0.0 &&\
+cd ~/code/scriptautomation123/jdbccli/target/dist/cli-1.0.0 &&\
 ./jre/bin/java \
 -Dlog4j.configurationFile=file:./log4j2.xml \
 -Dvault.config=./vaults.yaml \
--jar ./cliutil-1.0.0.jar exec-proc hr.hr_pkg.terminate_employee \
+-jar ./cli-1.0.0.jar exec-proc hr.hr_pkg.terminate_employee \
 --input "p_employee_id:NUMBER:100" \
 --type oracle \
 --database localhost:1521:xe \

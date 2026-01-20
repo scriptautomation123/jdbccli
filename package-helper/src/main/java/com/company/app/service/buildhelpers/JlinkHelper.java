@@ -6,6 +6,7 @@ import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Objects;
 import java.util.stream.Stream;
 
 public class JlinkHelper {
@@ -44,7 +45,7 @@ public class JlinkHelper {
         };
         System.out.println("[INFO] Running jdeps..."); // NOSONAR
         String modules = runAndCapture(jdepsCmd);
-        if (modules == null || modules.isBlank()) {
+        if (modules.isBlank()) {
             System.err.println("jdeps did not return any modules. Aborting."); // NOSONAR
             System.exit(4);
         }
@@ -101,10 +102,9 @@ public class JlinkHelper {
             Files.createDirectories(jreLibSecurity);
         }
 
-        String javaHome = System.getenv("JAVA_HOME");
-        if (javaHome == null) {
-            javaHome = System.getProperty("java.home");
-        }
+        String javaHome = Objects.requireNonNullElseGet(
+            System.getenv("JAVA_HOME"),
+            () -> System.getProperty("java.home"));
 
         Path sourceSecurityDir = Paths.get(javaHome, "lib", "security");
 
