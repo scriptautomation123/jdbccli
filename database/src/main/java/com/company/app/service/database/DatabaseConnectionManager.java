@@ -8,9 +8,9 @@ import com.company.app.service.util.LoggingUtils;
 import com.company.app.service.util.StringUtils;
 
 /**
- * Centralized manager for database connections using Java 21 features.
- * Encapsulates connection string generation, validation, and error handling.
- * Uses pattern matching for cleaner connection type selection.
+ * Centralized manager for database connections using Java 21 features. Encapsulates connection
+ * string generation, validation, and error handling. Uses pattern matching for cleaner connection
+ * type selection.
  */
 public final class DatabaseConnectionManager {
 
@@ -27,27 +27,26 @@ public final class DatabaseConnectionManager {
   private static final String SUCCESS = "SUCCESS";
 
   /**
-   * Configuration record for database connection parameters.
-   * Uses Java 21 record for immutable data.
-   * 
-   * @param type     database type (e.g., "oracle", "h2")
+   * Configuration record for database connection parameters. Uses Java 21 record for immutable
+   * data.
+   *
+   * @param type database type (e.g., "oracle", "h2")
    * @param database database name
-   * @param user     database username
+   * @param user database username
    * @param password database password
-   * @param host     optional host for JDBC connections
+   * @param host optional host for JDBC connections
    */
-  public record ConnectionConfig(String type, String database, String user, String password, String host) {
+  public record ConnectionConfig(
+      String type, String database, String user, String password, String host) {
 
-    /**
-     * Creates a connection config without host (for LDAP/memory connections).
-     */
+    /** Creates a connection config without host (for LDAP/memory connections). */
     public ConnectionConfig(String type, String database, String user, String password) {
       this(type, database, user, password, null);
     }
 
     /**
      * Validates the connection configuration.
-     * 
+     *
      * @throws IllegalArgumentException if any required parameter is invalid
      */
     public void validate() {
@@ -66,17 +65,15 @@ public final class DatabaseConnectionManager {
     }
   }
 
-  /**
-   * Private constructor to prevent instantiation.
-   */
+  /** Private constructor to prevent instantiation. */
   private DatabaseConnectionManager() {
     throw new UnsupportedOperationException("Utility class");
   }
 
   /**
-   * Creates a database connection using the provided configuration.
-   * Uses pattern matching for cleaner type handling.
-   * 
+   * Creates a database connection using the provided configuration. Uses pattern matching for
+   * cleaner type handling.
+   *
    * @param config connection configuration
    * @return database connection
    * @throws SQLException if connection creation fails
@@ -86,31 +83,24 @@ public final class DatabaseConnectionManager {
     try {
       config.validate();
     } catch (IllegalArgumentException e) {
-      LoggingUtils.logStructuredError(
-          DATABASE_CONNECTION,
-          VALIDATION,
-          FAILED,
-          e.getMessage(),
-          e);
+      LoggingUtils.logStructuredError(DATABASE_CONNECTION, VALIDATION, FAILED, e.getMessage(), e);
       throw e;
     }
 
     // Generate connection string
-    final String connectionUrl = ConnectionStringGenerator
-        .createConnectionString(config.type(), config.database(), config.user(), config.password(), config.host())
-        .url();
+    final String connectionUrl =
+        ConnectionStringGenerator.createConnectionString(
+                config.type(), config.database(), config.user(), config.password(), config.host())
+            .url();
 
     LoggingUtils.logDatabaseConnection(config.type(), config.database(), config.user());
 
     // Create connection with error handling
     try {
-      final Connection conn = DriverManager.getConnection(connectionUrl, config.user(), config.password());
+      final Connection conn =
+          DriverManager.getConnection(connectionUrl, config.user(), config.password());
       LoggingUtils.logStructuredError(
-          DATABASE_CONNECTION,
-          "create",
-          SUCCESS,
-          "Successfully connected to database",
-          null);
+          DATABASE_CONNECTION, "create", SUCCESS, "Successfully connected to database", null);
       return conn;
     } catch (SQLException e) {
       LoggingUtils.logStructuredError(
@@ -124,19 +114,19 @@ public final class DatabaseConnectionManager {
   }
 
   /**
-   * Creates a database connection with explicit parameters.
-   * Convenience method for backward compatibility.
-   * 
-   * @param type     database type
+   * Creates a database connection with explicit parameters. Convenience method for backward
+   * compatibility.
+   *
+   * @param type database type
    * @param database database name
-   * @param user     database username
+   * @param user database username
    * @param password database password
    * @return database connection
    * @throws SQLException if connection creation fails
    */
-  public static Connection createConnection(final String type, final String database,
-      final String user, final String password) throws SQLException {
+  public static Connection createConnection(
+      final String type, final String database, final String user, final String password)
+      throws SQLException {
     return createConnection(new ConnectionConfig(type, database, user, password));
   }
-
 }

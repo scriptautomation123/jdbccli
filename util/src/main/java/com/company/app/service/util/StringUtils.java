@@ -1,14 +1,12 @@
 package com.company.app.service.util;
 
 /**
- * Utility class for common string operations.
- * Provides null-safe validation and manipulation methods.
+ * Utility class for common string operations. Provides null-safe validation and manipulation
+ * methods.
  */
 public final class StringUtils {
 
-  /**
-   * Private constructor to prevent instantiation.
-   */
+  /** Private constructor to prevent instantiation. */
   private StringUtils() {
     throw new UnsupportedOperationException("Utility class");
   }

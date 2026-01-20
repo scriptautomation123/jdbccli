@@ -14,18 +14,16 @@ public class ConnectionStringGenerator {
   }
 
   /**
-   * Connection information record containing URL, user, and password.
-   * Uses Java 21 record for immutable data.
-   * 
-   * @param url      JDBC connection URL
-   * @param user     database username
+   * Connection information record containing URL, user, and password. Uses Java 21 record for
+   * immutable data.
+   *
+   * @param url JDBC connection URL
+   * @param user database username
    * @param password database password
    */
   public record ConnInfo(String url, String user, String password) {
-    
-    /**
-     * Compact constructor with validation.
-     */
+
+    /** Compact constructor with validation. */
     public ConnInfo {
       Objects.requireNonNull(url, "URL cannot be null");
       Objects.requireNonNull(user, "User cannot be null");
@@ -40,7 +38,8 @@ public class ConnectionStringGenerator {
   private record H2Jdbc(String database) implements ConnectionStrategy {
     @Override
     public String buildUrl() {
-      String template = getConfig().getRawValue("databases.h2.connection-string.jdbc-thin.template");
+      String template =
+          getConfig().getRawValue("databases.h2.connection-string.jdbc-thin.template");
       return String.format(template, database);
     }
   }
@@ -48,12 +47,14 @@ public class ConnectionStringGenerator {
   private record H2Memory(String database) implements ConnectionStrategy {
     @Override
     public String buildUrl() {
-      String template = getConfig().getRawValue("databases.h2.connection-string.jdbc-thin.template");
+      String template =
+          getConfig().getRawValue("databases.h2.connection-string.jdbc-thin.template");
       return String.format(template, "mem:" + database);
     }
   }
 
-  private record OracleJdbc(String host, String database, Integer port) implements ConnectionStrategy {
+  private record OracleJdbc(String host, String database, Integer port)
+      implements ConnectionStrategy {
     public OracleJdbc(String host, String database) {
       this(host, database, null);
     }
@@ -61,11 +62,15 @@ public class ConnectionStringGenerator {
     @Override
     public String buildUrl() {
       try {
-        String template = getConfig().getRawValue("databases.oracle.connection-string.jdbc-thin.template");
-        int portToUse = Objects.requireNonNullElseGet(
-            this.port,
-            () -> Integer.parseInt(
-                getConfig().getRawValue("databases.oracle.connection-string.jdbc-thin.port")));
+        String template =
+            getConfig().getRawValue("databases.oracle.connection-string.jdbc-thin.template");
+        int portToUse =
+            Objects.requireNonNullElseGet(
+                this.port,
+                () ->
+                    Integer.parseInt(
+                        getConfig()
+                            .getRawValue("databases.oracle.connection-string.jdbc-thin.port")));
         return String.format(template, host, portToUse, database);
       } catch (Exception e) {
         throw ExceptionUtils.wrap(
@@ -78,9 +83,12 @@ public class ConnectionStringGenerator {
     @Override
     public String buildUrl() {
       try {
-        int port = Integer.parseInt(getConfig().getRawValue("databases.oracle.connection-string.ldap.port"));
+        int port =
+            Integer.parseInt(
+                getConfig().getRawValue("databases.oracle.connection-string.ldap.port"));
         String context = getConfig().getRawValue("databases.oracle.connection-string.ldap.context");
-        String[] servers = getConfig().getRawValue("databases.oracle.connection-string.ldap.servers").split(",");
+        String[] servers =
+            getConfig().getRawValue("databases.oracle.connection-string.ldap.servers").split(",");
 
         StringBuilder urlBuilder = new StringBuilder("jdbc:oracle:thin:@");
 
@@ -105,7 +113,8 @@ public class ConnectionStringGenerator {
     return new ConnInfo(strategy.buildUrl(), user, password);
   }
 
-  private static ConnectionStrategy buildConnectionStrategy(String type, String database, String host) {
+  private static ConnectionStrategy buildConnectionStrategy(
+      String type, String database, String host) {
     if (isH2(type)) {
       return hasHost(host) ? new H2Jdbc(database) : new H2Memory(database);
     }

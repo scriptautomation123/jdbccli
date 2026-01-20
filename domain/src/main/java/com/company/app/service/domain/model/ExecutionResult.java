@@ -4,9 +4,8 @@ import java.io.PrintStream;
 import java.util.Map;
 
 /**
- * Immutable result object for database execution operations.
- * Contains exit code, result data, and optional message for CLI output
- * formatting.
+ * Immutable result object for database execution operations. Contains exit code, result data, and
+ * optional message for CLI output formatting.
  */
 public final class ExecutionResult {
 
@@ -27,12 +26,13 @@ public final class ExecutionResult {
 
   /**
    * Constructs a new ExecutionResult with the specified parameters.
-   * 
+   *
    * @param exitCode operation exit code
-   * @param data     result data map
-   * @param message  optional message
+   * @param data result data map
+   * @param message optional message
    */
-  private ExecutionResult(final int exitCode, final Map<String, Object> data, final String message) {
+  private ExecutionResult(
+      final int exitCode, final Map<String, Object> data, final String message) {
     this.exitCode = exitCode;
     this.data = data;
     this.message = message;
@@ -40,7 +40,7 @@ public final class ExecutionResult {
 
   /**
    * Gets the exit code.
-   * 
+   *
    * @return exit code
    */
   public int getExitCode() {
@@ -49,7 +49,7 @@ public final class ExecutionResult {
 
   /**
    * Gets the result data.
-   * 
+   *
    * @return result data map
    */
   public Map<String, Object> getData() {
@@ -58,7 +58,7 @@ public final class ExecutionResult {
 
   /**
    * Gets the message.
-   * 
+   *
    * @return optional message
    */
   public String getMessage() {
@@ -67,7 +67,7 @@ public final class ExecutionResult {
 
   /**
    * Formats and outputs the result to the specified stream.
-   * 
+   *
    * @param outputStream stream to write output to
    */
   public void formatOutput(final PrintStream outputStream) {
@@ -86,7 +86,7 @@ public final class ExecutionResult {
 
   /**
    * Creates a successful execution result with data.
-   * 
+   *
    * @param data result data map
    * @return successful execution result
    */
@@ -96,7 +96,7 @@ public final class ExecutionResult {
 
   /**
    * Creates a successful execution result with message.
-   * 
+   *
    * @param message success message
    * @return successful execution result
    */
@@ -106,9 +106,9 @@ public final class ExecutionResult {
 
   /**
    * Creates a failed execution result.
-   * 
+   *
    * @param exitCode failure exit code
-   * @param message  failure message
+   * @param message failure message
    * @return failed execution result
    */
   public static ExecutionResult failure(final int exitCode, final String message) {
@@ -117,10 +117,11 @@ public final class ExecutionResult {
 
   /**
    * Creates a password-only mode result for vault operations.
-   * 
+   *
    * @return password-only mode result
    */
   public static ExecutionResult passwordOnlyMode() {
-    return new ExecutionResult(SUCCESS_EXIT_CODE, null, "=== VAULT PASSWORD DECRYPTION ===\nSuccess: true");
+    return new ExecutionResult(
+        SUCCESS_EXIT_CODE, null, "=== VAULT PASSWORD DECRYPTION ===\nSuccess: true");
   }
 }

@@ -10,174 +10,237 @@ import java.util.Objects;
 import java.util.stream.Stream;
 
 public class JlinkHelper {
-    public static void main(String[] args) throws IOException, InterruptedException {
-        if (args.length != 3) {
-            System.err.println("Usage: java ...JlinkHelper <path-to-jar> <path-to-jmods> <output-jre-dir>"); // NOSONAR
-            System.exit(1);
-        }
-        Path jarPath = Paths.get(args[0]);
-        Path jmodsPath = Paths.get(args[1]);
-        Path outputJreDir = Paths.get(args[2]);
+  // Exit codes
+  private static final int EXIT_INVALID_ARGS = 1;
+  private static final int EXIT_JAR_NOT_FOUND = 2;
+  private static final int EXIT_JMODS_NOT_FOUND = 3;
+  private static final int EXIT_JDEPS_FAILED = 4;
+  private static final int EXIT_JLINK_FAILED = 5;
+  private static final int EXIT_CMD_EXECUTION_FAILED = 10;
 
-        System.out.println("[INFO] === AIE Util Bundle Information ==="); // NOSONAR
-        System.out.println("[INFO] JAR file: " + jarPath.toAbsolutePath()); // NOSONAR
-        System.out.println("[INFO] JRE output: " + outputJreDir.toAbsolutePath()); // NOSONAR
+  // Crypto modules required for Oracle connectivity
+  private static final String[] REQUIRED_CRYPTO_MODULES = {"jdk.crypto.ec", "jdk.crypto.cryptoki"};
 
-        if (!Files.exists(jarPath)) {
-            System.err.println("JAR file does not exist: " + jarPath); // NOSONAR
-            System.exit(2);
-        }
-        if (!Files.exists(jmodsPath) || !Files.isDirectory(jmodsPath)) {
-            System.err.println("jmods directory does not exist: " + jmodsPath); // NOSONAR
-            System.exit(3);
-        }
+  public static void main(String[] args) throws IOException, InterruptedException {
+    validateArguments(args);
+    try {
+      runJlinkBuild(args[0], args[1], args[2]);
+    } catch (JlinkException e) {
+      System.err.println("[ERROR] " + e.getMessage());
+      System.exit(e.getExitCode());
+    }
+  }
 
-        long jarSize = Files.size(jarPath);
-        System.out.println("[INFO] JAR size: " + (jarSize / 1024 / 1024) + " MB"); // NOSONAR
+  private static void validateArguments(String[] args) {
+    if (args.length != 3) {
+      System.err.println(
+          "Usage: java ...JlinkHelper <path-to-jar> <path-to-jmods> <output-jre-dir>");
+      System.exit(EXIT_INVALID_ARGS);
+    }
+  }
 
-        String[] jdepsCmd = new String[] {
-                "jdeps",
-                "--print-module-deps",
-                "--ignore-missing-deps",
-                "--multi-release", "21",
-                "--recursive",
-                jarPath.toString()
+  private static void runJlinkBuild(String jarArg, String jmodsArg, String outputArg)
+      throws IOException, InterruptedException, JlinkException {
+    Path jarPath = Paths.get(jarArg);
+    Path jmodsPath = Paths.get(jmodsArg);
+    Path outputJreDir = Paths.get(outputArg);
+
+    System.out.println("[INFO] === AIE Util Bundle Information ===");
+    System.out.println("[INFO] JAR file: " + jarPath.toAbsolutePath());
+    System.out.println("[INFO] JRE output: " + outputJreDir.toAbsolutePath());
+
+    validatePaths(jarPath, jmodsPath);
+    long jarSize = Files.size(jarPath);
+    System.out.println("[INFO] JAR size: " + (jarSize / 1024 / 1024) + " MB");
+
+    String modules = discoverModules(jarPath);
+    modules = appendCryptoModules(modules);
+    System.out.println("[INFO] jdeps modules: " + modules);
+    System.out.println("[INFO] Total modules required: " + modules.split(",").length);
+
+    buildJre(jmodsPath, modules, outputJreDir);
+    copyJavaSecurityFiles(outputJreDir);
+    reportResults(jarPath, outputJreDir);
+  }
+
+  private static void validatePaths(Path jarPath, Path jmodsPath) throws JlinkException {
+    if (!Files.exists(jarPath)) {
+      throw new JlinkException("JAR file does not exist: " + jarPath, EXIT_JAR_NOT_FOUND);
+    }
+    if (!Files.exists(jmodsPath) || !Files.isDirectory(jmodsPath)) {
+      throw new JlinkException(
+          "jmods directory does not exist: " + jmodsPath, EXIT_JMODS_NOT_FOUND);
+    }
+  }
+
+  private static String discoverModules(Path jarPath)
+      throws IOException, InterruptedException, JlinkException {
+    String[] jdepsCmd =
+        new String[] {
+          "jdeps",
+          "--print-module-deps",
+          "--ignore-missing-deps",
+          "--multi-release",
+          "21",
+          "--recursive",
+          jarPath.toString()
         };
-        System.out.println("[INFO] Running jdeps..."); // NOSONAR
-        String modules = runAndCapture(jdepsCmd);
-        if (modules.isBlank()) {
-            System.err.println("jdeps did not return any modules. Aborting."); // NOSONAR
-            System.exit(4);
-        }
-        modules = modules.trim();
+    System.out.println("[INFO] Running jdeps...");
+    String modules = runAndCapture(jdepsCmd);
 
-        String[] requiredCryptoModules = { "jdk.crypto.ec", "jdk.crypto.cryptoki" };
-        StringBuilder modulesBuilder = new StringBuilder(modules);
-        for (String cryptoModule : requiredCryptoModules) {
-            if (!modules.contains(cryptoModule)) {
-                modulesBuilder.append(",").append(cryptoModule);
-                System.out.println("[INFO] Added required crypto module: " + cryptoModule); // NOSONAR
-            }
-        }
-        modules = modulesBuilder.toString();
-        System.out.println("[INFO] jdeps modules: " + modules); // NOSONAR
+    if (modules.isBlank()) {
+      throw new JlinkException("jdeps did not return any modules", EXIT_JDEPS_FAILED);
+    }
+    return modules.trim();
+  }
 
-        int moduleCount = modules.split(",").length;
-        System.out.println("[INFO] Total modules required: " + moduleCount); // NOSONAR
+  private static String appendCryptoModules(String modules) {
+    StringBuilder result = new StringBuilder(modules);
+    for (String cryptoModule : REQUIRED_CRYPTO_MODULES) {
+      if (!modules.contains(cryptoModule)) {
+        result.append(",").append(cryptoModule);
+        System.out.println("[INFO] Added required crypto module: " + cryptoModule);
+      }
+    }
+    return result.toString();
+  }
 
-        String[] jlinkCmd = new String[] {
-                "jlink",
-                "--module-path", jmodsPath.toString(),
-                "--add-modules", modules,
-                "--output", outputJreDir.toString(),
-                "--strip-debug",
-                "--no-man-pages",
-                "--no-header-files",
-                "--compress", "zip-2"
+  private static void buildJre(Path jmodsPath, String modules, Path outputJreDir)
+      throws IOException, InterruptedException, JlinkException {
+    String[] jlinkCmd =
+        new String[] {
+          "jlink",
+          "--module-path",
+          jmodsPath.toString(),
+          "--add-modules",
+          modules,
+          "--output",
+          outputJreDir.toString(),
+          "--strip-debug",
+          "--no-man-pages",
+          "--no-header-files",
+          "--compress",
+          "zip-2"
         };
-        System.out.println("[INFO] Running jlink..."); // NOSONAR
-        int jlinkExit = runAndStream(jlinkCmd);
-        if (jlinkExit != 0) {
-            System.err.println("jlink failed with exit code: " + jlinkExit); // NOSONAR
-            System.exit(5);
-        }
+    System.out.println("[INFO] Running jlink...");
+    int jlinkExit = runAndStream(jlinkCmd);
+    if (jlinkExit != 0) {
+      throw new JlinkException("jlink failed with exit code: " + jlinkExit, EXIT_JLINK_FAILED);
+    }
+  }
 
-        System.out.println("[INFO] Copying Java security files to JRE..."); // NOSONAR
-        copyJavaSecurityFiles(outputJreDir);
+  private static void reportResults(Path jarPath, Path outputJreDir) throws IOException {
+    if (Files.exists(outputJreDir)) {
+      long jarSize = Files.size(jarPath);
+      long jreSize = calculateDirectorySize(outputJreDir);
+      System.out.println("[INFO] Custom JRE created at: " + outputJreDir);
+      System.out.println("[INFO] JRE size: " + (jreSize / 1024 / 1024) + " MB");
+      System.out.println(
+          "[INFO] Size reduction: " + ((jarSize - jreSize) / 1024 / 1024) + " MB saved");
+    }
+    System.out.println("[INFO] === Bundle Information Complete ===");
+  }
 
-        if (Files.exists(outputJreDir)) {
-            long jreSize = calculateDirectorySize(outputJreDir);
-            System.out.println("[INFO] Custom JRE created at: " + outputJreDir); // NOSONAR
-            System.out.println("[INFO] JRE size: " + (jreSize / 1024 / 1024) + " MB"); // NOSONAR
-            System.out.println("[INFO] Size reduction: " + ((jarSize - jreSize) / 1024 / 1024) + " MB saved"); // NOSONAR
-        }
-
-        System.out.println("[INFO] === Bundle Information Complete ==="); // NOSONAR
+  private static void copyJavaSecurityFiles(Path jreDir) throws IOException {
+    Path jreLibSecurity = jreDir.resolve("lib").resolve("security");
+    if (!Files.exists(jreLibSecurity)) {
+      Files.createDirectories(jreLibSecurity);
     }
 
-    private static void copyJavaSecurityFiles(Path jreDir) throws IOException {
-        Path jreLibSecurity = jreDir.resolve("lib").resolve("security");
+    String javaHome =
+        Objects.requireNonNullElseGet(
+            System.getenv("JAVA_HOME"), () -> System.getProperty("java.home"));
+    Path sourceSecurityDir = Paths.get(javaHome, "lib", "security");
 
-        if (!Files.exists(jreLibSecurity)) {
-            Files.createDirectories(jreLibSecurity);
-        }
-
-        String javaHome = Objects.requireNonNullElseGet(
-            System.getenv("JAVA_HOME"),
-            () -> System.getProperty("java.home"));
-
-        Path sourceSecurityDir = Paths.get(javaHome, "lib", "security");
-
-        if (Files.exists(sourceSecurityDir) && Files.isDirectory(sourceSecurityDir)) {
-            System.out.println("[INFO] Copying Java security files from: " + sourceSecurityDir); // NOSONAR
-
-            try (Stream<Path> stream = Files.walk(sourceSecurityDir)) {
-                stream.filter(Files::isRegularFile)
-                        .forEach(sourceFile -> {
-                            try {
-                                Path relativePath = sourceSecurityDir.relativize(sourceFile);
-                                Path targetFile = jreLibSecurity.resolve(relativePath);
-                                Files.createDirectories(targetFile.getParent());
-                                Files.copy(sourceFile, targetFile,
-                                        java.nio.file.StandardCopyOption.REPLACE_EXISTING);
-                                System.out.println("[INFO] Copied: " + relativePath); // NOSONAR
-                            } catch (IOException e) {
-                                System.err.println("Warning: Could not copy " + sourceFile + ": " + e.getMessage()); // NOSONAR
-                            }
-                        });
-            }
-
-            System.out.println("[INFO] Java security files copied to: " + jreLibSecurity); // NOSONAR
-        } else {
-            System.err.println("Warning: JAVA_HOME/lib/security does not exist: " + sourceSecurityDir); // NOSONAR
-            System.err.println("JAVA_HOME: " + javaHome); // NOSONAR
-        }
+    System.out.println("[INFO] Copying Java security files to JRE...");
+    if (!Files.exists(sourceSecurityDir) || !Files.isDirectory(sourceSecurityDir)) {
+      System.err.println("Warning: JAVA_HOME/lib/security does not exist: " + sourceSecurityDir);
+      System.err.println("JAVA_HOME: " + javaHome);
+      return;
     }
 
-    private static long calculateDirectorySize(Path dir) throws IOException {
-        try (Stream<Path> stream = Files.walk(dir)) {
-            return stream
-                    .filter(Files::isRegularFile)
-                    .mapToLong(path -> {
-                        try {
-                            return Files.size(path);
-                        } catch (IOException e) {
-                            return 0L;
-                        }
-                    })
-                    .sum();
-        }
+    System.out.println("[INFO] Copying Java security files from: " + sourceSecurityDir);
+    try (Stream<Path> stream = Files.walk(sourceSecurityDir)) {
+      stream
+          .filter(Files::isRegularFile)
+          .forEach(
+              sourceFile -> {
+                try {
+                  Path relativePath = sourceSecurityDir.relativize(sourceFile);
+                  Path targetFile = jreLibSecurity.resolve(relativePath);
+                  Files.createDirectories(targetFile.getParent());
+                  Files.copy(
+                      sourceFile, targetFile, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                  System.out.println("[INFO] Copied: " + relativePath);
+                } catch (IOException e) {
+                  System.err.println(
+                      "Warning: Could not copy " + sourceFile + ": " + e.getMessage());
+                }
+              });
+    }
+    System.out.println("[INFO] Java security files copied to: " + jreLibSecurity);
+  }
+
+  private static long calculateDirectorySize(Path dir) throws IOException {
+    try (Stream<Path> stream = Files.walk(dir)) {
+      return stream
+          .filter(Files::isRegularFile)
+          .mapToLong(
+              path -> {
+                try {
+                  return Files.size(path);
+                } catch (IOException e) {
+                  return 0L;
+                }
+              })
+          .sum();
+    }
+  }
+
+  private static String runAndCapture(String[] cmd)
+      throws IOException, InterruptedException, JlinkException {
+    ProcessBuilder pb = new ProcessBuilder(cmd);
+    pb.redirectErrorStream(true);
+    Process proc = pb.start();
+    StringBuilder sb = new StringBuilder();
+    try (BufferedReader reader = new BufferedReader(new InputStreamReader(proc.getInputStream()))) {
+      String line;
+      while ((line = reader.readLine()) != null) {
+        sb.append(line);
+      }
+    }
+    int exit = proc.waitFor();
+    if (exit != 0) {
+      throw new JlinkException(
+          "Command failed: " + String.join(" ", cmd), EXIT_CMD_EXECUTION_FAILED);
+    }
+    return sb.toString();
+  }
+
+  private static int runAndStream(String[] cmd) throws IOException, InterruptedException {
+    ProcessBuilder pb = new ProcessBuilder(cmd);
+    pb.redirectErrorStream(true);
+    Process proc = pb.start();
+    try (BufferedReader reader = new BufferedReader(new InputStreamReader(proc.getInputStream()))) {
+      String line;
+      while ((line = reader.readLine()) != null) {
+        System.out.println(line);
+      }
+    }
+    return proc.waitFor();
+  }
+
+  // Simple exception class for jlink operations
+  private static class JlinkException extends Exception {
+    private final int exitCode;
+
+    JlinkException(String message, int exitCode) {
+      super(message);
+      this.exitCode = exitCode;
     }
 
-    private static String runAndCapture(String[] cmd) throws IOException, InterruptedException {
-        ProcessBuilder pb = new ProcessBuilder(cmd);
-        pb.redirectErrorStream(true);
-        Process proc = pb.start();
-        StringBuilder sb = new StringBuilder();
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(proc.getInputStream()))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                sb.append(line);
-            }
-        }
-        int exit = proc.waitFor();
-        if (exit != 0) {
-            System.err.println("Command failed: " + String.join(" ", cmd)); // NOSONAR
-            System.exit(10);
-        }
-        return sb.toString();
+    int getExitCode() {
+      return exitCode;
     }
-
-    private static int runAndStream(String[] cmd) throws IOException, InterruptedException {
-        ProcessBuilder pb = new ProcessBuilder(cmd);
-        pb.redirectErrorStream(true);
-        Process proc = pb.start();
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(proc.getInputStream()))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                System.out.println(line); // NOSONAR
-            }
-        }
-        return proc.waitFor();
-    }
+  }
 }

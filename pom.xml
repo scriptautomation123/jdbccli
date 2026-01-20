@@ -23,6 +23,11 @@
         <maven.compiler.release>21</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
+        <!-- SonarQube configuration -->
+        <sonar.issue.ignore.multicriteria>e1</sonar.issue.ignore.multicriteria>
+        <sonar.issue.ignore.multicriteria.e1.ruleKey>java:S106</sonar.issue.ignore.multicriteria.e1.ruleKey>
+        <sonar.issue.ignore.multicriteria.e1.resourceKey>**/buildhelpers/**</sonar.issue.ignore.multicriteria.e1.resourceKey>
+
         <!-- Dependency versions -->
         <log4j2.version>2.25.3</log4j2.version>
         <jackson.version>2.19.2</jackson.version>
@@ -105,6 +110,25 @@
                     <groupId>com.diffplug.spotless</groupId>
                     <artifactId>spotless-maven-plugin</artifactId>
                     <version>${spotless.plugin.version}</version>
+                    <configuration>
+                        <java>
+                            <googleJavaFormat>
+                                <version>1.21.0</version>
+                                <style>GOOGLE</style>
+                                <reflowLongStrings>true</reflowLongStrings>
+                            </googleJavaFormat>
+                            <trimTrailingWhitespace/>
+                            <endWithNewline/>
+                            <importOrder>
+                                <order>java,javax,org,com</order>
+                                <wildcardsLast>true</wildcardsLast>
+                            </importOrder>
+                            <removeUnusedImports/>
+                        </java>
+                        <upToDateChecking>
+                            <enabled>true</enabled>
+                        </upToDateChecking>
+                    </configuration>
                 </plugin>
                 <plugin>
                     <groupId>org.cyclonedx</groupId>

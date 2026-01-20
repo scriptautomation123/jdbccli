@@ -5,6 +5,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 
@@ -15,7 +16,6 @@ public class YamlConfig {
     this.config = loadConfig(path);
   }
 
-  @SuppressWarnings("unchecked")
   private Map<String, Object> loadConfig(String path) {
     try {
       ObjectMapper yaml = new ObjectMapper(new YAMLFactory());
@@ -24,7 +24,7 @@ public class YamlConfig {
       File configFile = new File(path);
       LoggingUtils.logConfigLoading(configFile.getAbsolutePath());
 
-      return yaml.readValue(configFile, Map.class);
+      return yaml.readValue(configFile, new TypeReference<Map<String, Object>>() {});
     } catch (Exception e) {
       LoggingUtils.logStructuredError(
           "config_loading", "load", "FAILED", "Could not find configuration file: " + path, e);
@@ -75,21 +75,35 @@ public class YamlConfig {
     return config;
   }
 
-  @SuppressWarnings("unchecked")
+  /**
+   * Retrieves a vault configuration entry by ID using modern stream API.
+   *
+   * @param id the vault ID to search for
+   * @return vault configuration map or empty map if not found
+   */
   public Map<String, Object> getVaultEntryById(String id) {
-    Object vaultsObj = config.get("vaults");
-    if (vaultsObj instanceof List<?>) {
-      List<?> vaultsList = (List<?>) vaultsObj;
-      for (Object entry : vaultsList) {
-        if (entry instanceof Map<?, ?>) {
-          Map<?, ?> map = (Map<?, ?>) entry;
-          Object entryId = map.get("id");
-          if (entryId != null && entryId.toString().equals(id)) {
-            return (Map<String, Object>) map;
-          }
-        }
-      }
-    }
-    return Collections.emptyMap();
+    return switch (config.get("vaults")) {
+      case List<?> vaultsList ->
+          vaultsList.stream()
+              .filter(
+                  entry ->
+                      entry instanceof Map<?, ?> map && id.equals(String.valueOf(map.get("id"))))
+              .findFirst()
+              .map(this::castToStringObjectMap)
+              .orElse(Collections.emptyMap());
+      default -> Collections.emptyMap();
+    };
+  }
+
+  /**
+   * Safely casts a vault entry to Map&lt;String, Object&gt;. The cast is safe because YAML
+   * deserialization guarantees this structure.
+   *
+   * @param entry the entry object from the vaults list
+   * @return properly typed map
+   */
+  @SuppressWarnings("unchecked") // Safe cast - YAML structure guarantees Map<String, Object>
+  private Map<String, Object> castToStringObjectMap(Object entry) {
+    return (Map<String, Object>) entry;
   }
 }

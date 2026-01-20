@@ -1,6 +1,6 @@
-package com.company.app.service. cli;
+package com.company.app.service.cli;
 
-import java.util. concurrent.Callable;
+import java.util.concurrent.Callable;
 
 import com.company.app.service.service.model.VaultConfig;
 
@@ -9,20 +9,29 @@ import picocli.CommandLine.Option;
 import picocli.CommandLine.Spec;
 
 /**
- * Abstract base class for database CLI commands providing common PicoCLI options
- * and vault configuration support.
- * Uses composition internally - subclasses create their own service instances.
+ * Abstract base class for database CLI commands providing common PicoCLI options and vault
+ * configuration support. Uses composition internally - subclasses create their own service
+ * instances.
  */
 public abstract class BaseDatabaseCliCommand implements Callable<Integer> {
 
   // Common PicoCLI options shared across all database commands
-  @Option(names = { "-t", "--type" }, description = "Database type", defaultValue = "oracle")
+  @Option(
+      names = {"-t", "--type"},
+      description = "Database type",
+      defaultValue = "oracle")
   protected String type;
 
-  @Option(names = { "-d", "--database" }, description = "Database name", required = true)
+  @Option(
+      names = {"-d", "--database"},
+      description = "Database name",
+      required = true)
   protected String database;
 
-  @Option(names = { "-u", "--user" }, description = "Database username", required = true)
+  @Option(
+      names = {"-u", "--user"},
+      description = "Database username",
+      required = true)
   protected String user;
 
   @Option(names = "--vault-url", description = "Vault base URL")
@@ -37,12 +46,11 @@ public abstract class BaseDatabaseCliCommand implements Callable<Integer> {
   @Option(names = "--ait", description = "AIT")
   protected String ait;
 
-  @Spec
-  protected CommandSpec spec;
+  @Spec protected CommandSpec spec;
 
   /**
-   * Default constructor for PicoCLI initialization.
-   * Subclasses should create their own service instances.
+   * Default constructor for PicoCLI initialization. Subclasses should create their own service
+   * instances.
    */
   protected BaseDatabaseCliCommand() {
     // PicoCLI requires no-arg constructor
@@ -50,7 +58,7 @@ public abstract class BaseDatabaseCliCommand implements Callable<Integer> {
 
   /**
    * Creates vault configuration from command-line options.
-   * 
+   *
    * @return vault configuration object
    */
   protected VaultConfig createVaultConfig() {
@@ -58,9 +66,9 @@ public abstract class BaseDatabaseCliCommand implements Callable<Integer> {
   }
 
   /**
-   * Prompts user for password via console or standard input.
-   * This is a fallback - prefer using PasswordResolver for vault-based auth.
-   * 
+   * Prompts user for password via console or standard input. This is a fallback - prefer using
+   * PasswordResolver for vault-based auth.
+   *
    * @return password entered by user
    */
   protected String promptForPassword() {

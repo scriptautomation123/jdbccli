@@ -9,10 +9,9 @@ import com.company.app.service.util.LoggingUtils;
 import com.company.app.service.util.VaultClient;
 
 /**
- * Resolves database passwords using multiple strategies: direct vault
- * parameters,
- * vault lookup, or console prompting. Provides a unified interface for password
- * resolution across different authentication methods.
+ * Resolves database passwords using multiple strategies: direct vault parameters, vault lookup, or
+ * console prompting. Provides a unified interface for password resolution across different
+ * authentication methods.
  */
 public class PasswordResolver {
 
@@ -30,23 +29,21 @@ public class PasswordResolver {
 
   /**
    * Constructs a PasswordResolver with a password prompter function.
-   * 
-   * @param passwordPrompter function to prompt for password when other methods
-   *                         fail
+   *
+   * @param passwordPrompter function to prompt for password when other methods fail
    */
   public PasswordResolver(final Supplier<String> passwordPrompter) {
-    this.passwordPrompter = Objects.requireNonNull(passwordPrompter, "Password prompter cannot be null");
+    this.passwordPrompter =
+        Objects.requireNonNull(passwordPrompter, "Password prompter cannot be null");
   }
 
   /**
-   * Resolves a password using the most appropriate method based on the request.
-   * Tries direct vault parameters first, then vault lookup, then console prompt.
-   * 
+   * Resolves a password using the most appropriate method based on the request. Tries direct vault
+   * parameters first, then vault lookup, then console prompt.
+   *
    * @param request the password request containing user and database information
-   * @return Optional containing the resolved password, or empty if resolution
-   *         failed
-   * @throws RuntimeException if password resolution fails and cannot fall back to
-   *                          console prompt
+   * @return Optional containing the resolved password, or empty if resolution failed
+   * @throws RuntimeException if password resolution fails and cannot fall back to console prompt
    */
   public Optional<String> resolvePassword(final PasswordRequest request) {
     Objects.requireNonNull(request, "PasswordRequest cannot be null");

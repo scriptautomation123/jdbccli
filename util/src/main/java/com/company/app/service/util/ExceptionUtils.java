@@ -9,9 +9,8 @@ import com.company.app.service.domain.model.ExecutionResult;
 import picocli.CommandLine;
 
 /**
- * Utility class for centralized exception handling and error reporting.
- * Provides methods for logging, wrapping, and translating exceptions
- * for both application and CLI contexts.
+ * Utility class for centralized exception handling and error reporting. Provides methods for
+ * logging, wrapping, and translating exceptions for both application and CLI contexts.
  */
 public final class ExceptionUtils {
 
@@ -37,24 +36,22 @@ public final class ExceptionUtils {
     // Utility class - prevent instantiation
   }
 
-
   /**
    * Wraps an exception in a ConfigurationException.
-   * 
+   *
    * @param exception exception to wrap
-   * @param message   error message
+   * @param message error message
    * @return wrapped exception
    */
   public static RuntimeException wrap(final Exception exception, final String message) {
     return new ConfigurationException(message, exception);
   }
 
-
   /**
    * Handles execution exceptions with structured logging and appropriate return or rethrow.
-   * 
+   *
    * @param exception exception to handle
-   * @param context   context identifier for logging
+   * @param context context identifier for logging
    * @param operation operation identifier for logging
    * @return execution result if handleable, otherwise rethrows
    */
@@ -63,37 +60,30 @@ public final class ExceptionUtils {
 
     if (exception instanceof IllegalArgumentException) {
       LoggingUtils.logStructuredError(
-          context,
-          operation,
-          "FAILED",
-          "Invalid parameters: " + exception.getMessage(),
-          exception);
+          context, operation, "FAILED", "Invalid parameters: " + exception.getMessage(), exception);
       return ExecutionResult.failure(1, "[ERROR] Invalid parameters: " + exception.getMessage());
     }
 
     LoggingUtils.logStructuredError(
-        context,
-        operation,
-        "FAILED",
-        "Unexpected error: " + exception.getMessage(),
-        exception);
+        context, operation, "FAILED", "Unexpected error: " + exception.getMessage(), exception);
     throw wrap(exception, "Failed to execute database operation");
   }
 
   /**
-   * Handles CLI exceptions with appropriate logging and user-friendly output.
-   * Uses Java 21 pattern matching for cleaner exception type handling.
-   * 
-   * @param exception   exception to handle
-   * @param operation   operation that failed
+   * Handles CLI exceptions with appropriate logging and user-friendly output. Uses Java 21 pattern
+   * matching for cleaner exception type handling.
+   *
+   * @param exception exception to handle
+   * @param operation operation that failed
    * @param errorStream stream to write error output
    * @return exit code
    */
-  public static int handleCliException(final Exception exception, final String operation,
-      final PrintStream errorStream) {
+  public static int handleCliException(
+      final Exception exception, final String operation, final PrintStream errorStream) {
     return switch (exception) {
       case SQLException sqlEx -> handleCliSQLException(sqlEx, operation, errorStream);
-      case ConfigurationException configEx -> handleCliConfigurationException(configEx, operation, errorStream);
+      case ConfigurationException configEx ->
+          handleCliConfigurationException(configEx, operation, errorStream);
       case CliUsageException usageEx -> handleCliUsageException(usageEx, errorStream);
       default -> {
         // Generic exception handling
@@ -108,9 +98,9 @@ public final class ExceptionUtils {
 
   /**
    * Handles SQL exceptions specifically for CLI with structured logging.
-   * 
-   * @param exception   SQL exception to handle
-   * @param operation   operation that failed
+   *
+   * @param exception SQL exception to handle
+   * @param operation operation that failed
    * @param errorStream stream to write error output
    * @return exit code
    */
@@ -120,7 +110,8 @@ public final class ExceptionUtils {
     final String userMessage = translateSQLExceptionForCli(exception);
 
     // Log once with structured data
-    LoggingUtils.logStructuredError("sql_exception", operation, errorType, exception.getMessage(), exception);
+    LoggingUtils.logStructuredError(
+        "sql_exception", operation, errorType, exception.getMessage(), exception);
 
     // Print user-friendly message
     errorStream.println(ERROR_PREFIX + userMessage);
@@ -130,14 +121,16 @@ public final class ExceptionUtils {
 
   /**
    * Handles configuration exceptions for CLI.
-   * 
-   * @param exception   configuration exception to handle
-   * @param operation   operation that failed
+   *
+   * @param exception configuration exception to handle
+   * @param operation operation that failed
    * @param errorStream stream to write error output
    * @return exit code
    */
   public static int handleCliConfigurationException(
-      final ConfigurationException exception, final String operation, final PrintStream errorStream) {
+      final ConfigurationException exception,
+      final String operation,
+      final PrintStream errorStream) {
     // Log once
     LoggingUtils.logStructuredError(
         "configuration_error", operation, "CONFIG_ERROR", exception.getMessage(), exception);
@@ -150,12 +143,13 @@ public final class ExceptionUtils {
 
   /**
    * Handles CLI usage exceptions (user errors).
-   * 
-   * @param exception   usage exception to handle
+   *
+   * @param exception usage exception to handle
    * @param errorStream stream to write error output
    * @return exit code
    */
-  public static int handleCliUsageException(final CliUsageException exception, final PrintStream errorStream) {
+  public static int handleCliUsageException(
+      final CliUsageException exception, final PrintStream errorStream) {
     // For usage errors, don't log as errors - just print to user
     errorStream.println(ERROR_PREFIX + exception.getMessage());
     return 1;
@@ -163,7 +157,7 @@ public final class ExceptionUtils {
 
   /**
    * Translates SQL exceptions to user-friendly messages for CLI output.
-   * 
+   *
    * @param exception SQL exception to translate
    * @return user-friendly message
    */
@@ -185,9 +179,9 @@ public final class ExceptionUtils {
   }
 
   /**
-   * Translates generic exceptions to user-friendly messages for CLI output.
-   * Uses Java 21 pattern matching for cleaner type checking.
-   * 
+   * Translates generic exceptions to user-friendly messages for CLI output. Uses Java 21 pattern
+   * matching for cleaner type checking.
+   *
    * @param exception exception to translate
    * @return user-friendly message
    */
@@ -201,7 +195,7 @@ public final class ExceptionUtils {
 
   /**
    * Determines the error type for SQL exceptions based on SQL state.
-   * 
+   *
    * @param exception SQL exception to analyze
    * @return error type string
    */
@@ -222,18 +216,15 @@ public final class ExceptionUtils {
     };
   }
 
-  /**
-   * Exception for CLI usage errors (user input problems).
-   */
+  /** Exception for CLI usage errors (user input problems). */
   public static class CliUsageException extends RuntimeException {
 
     /** Serial version UID for serialization */
-    @Serial
-    private static final long serialVersionUID = 1L;
+    @Serial private static final long serialVersionUID = 1L;
 
     /**
      * Constructs a new CliUsageException with the specified message.
-     * 
+     *
      * @param message error message
      */
     public CliUsageException(final String message) {
@@ -241,18 +232,15 @@ public final class ExceptionUtils {
     }
   }
 
-  /**
-   * Exception for configuration-related errors.
-   */
+  /** Exception for configuration-related errors. */
   public static class ConfigurationException extends RuntimeException {
 
     /** Serial version UID for serialization */
-    @Serial
-    private static final long serialVersionUID = 1L;
+    @Serial private static final long serialVersionUID = 1L;
 
     /**
      * Constructs a new ConfigurationException with the specified message.
-     * 
+     *
      * @param message error message
      */
     public ConfigurationException(final String message) {
@@ -261,35 +249,34 @@ public final class ExceptionUtils {
 
     /**
      * Constructs a new ConfigurationException with the specified message and cause.
-     * 
+     *
      * @param message error message
-     * @param cause   underlying cause
+     * @param cause underlying cause
      */
     public ConfigurationException(final String message, final Throwable cause) {
       super(message, cause);
     }
   }
 
-  /**
-   * Handler for execution exceptions in PicoCLI commands.
-   */
+  /** Handler for execution exceptions in PicoCLI commands. */
   public static class ExecutionExceptionHandler implements CommandLine.IExecutionExceptionHandler {
 
     @Override
     public int handleExecutionException(
-        final Exception exception, final CommandLine cmd, final CommandLine.ParseResult parseResult) {
+        final Exception exception,
+        final CommandLine cmd,
+        final CommandLine.ParseResult parseResult) {
       LoggingUtils.logMinimalError(exception);
       return CommandLine.ExitCode.SOFTWARE;
     }
   }
 
-  /**
-   * Handler for parameter exceptions in PicoCLI commands.
-   */
+  /** Handler for parameter exceptions in PicoCLI commands. */
   public static class ParameterExceptionHandler implements CommandLine.IParameterExceptionHandler {
 
     @Override
-    public int handleParseException(final CommandLine.ParameterException exception, final String[] args) {
+    public int handleParseException(
+        final CommandLine.ParameterException exception, final String[] args) {
       final CommandLine cmd = exception.getCommandLine();
       cmd.getErr().println(exception.getMessage());
       if (!CommandLine.UnmatchedArgumentException.printSuggestions(exception, cmd.getErr())) {

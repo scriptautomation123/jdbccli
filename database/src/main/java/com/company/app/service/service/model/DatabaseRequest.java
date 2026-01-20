@@ -1,8 +1,8 @@
 package com.company.app.service.service.model;
 
 /**
- * Core connection details shared by all database requests.
- * Ensures non-blank connection metadata and never exposes a null VaultConfig.
+ * Core connection details shared by all database requests. Ensures non-blank connection metadata
+ * and never exposes a null VaultConfig.
  */
 public record DatabaseRequest(String type, String database, String user, VaultConfig vaultConfig) {
 

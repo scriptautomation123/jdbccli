@@ -20,13 +20,12 @@ import com.company.app.service.util.LoggingUtils;
 import com.company.app.service.util.StringUtils;
 
 /**
- * Executes database stored procedures with parameter parsing and type
- * conversion.
- * Supports both input and output parameters with automatic JDBC type mapping.
+ * Executes database stored procedures with parameter parsing and type conversion. Supports both
+ * input and output parameters with automatic JDBC type mapping.
  *
- * <p><strong>SECURITY:</strong> Procedure names are validated against an allowlist
- * pattern to prevent SQL injection. Only alphanumeric characters, underscores,
- * and dots (for schema qualification) are allowed.</p>
+ * <p><strong>SECURITY:</strong> Procedure names are validated against an allowlist pattern to
+ * prevent SQL injection. Only alphanumeric characters, underscores, and dots (for schema
+ * qualification) are allowed.
  */
 public class ProcedureExecutor {
 
@@ -40,27 +39,26 @@ public class ProcedureExecutor {
   private static final String PARAMETER_PARSING = "parameter_parsing";
 
   /**
-   * Allowlist pattern for valid procedure names to prevent SQL injection.
-   * Allows: alphanumeric, underscore, and dot (for schema.procedure notation).
-   * Examples: "my_proc", "schema.my_proc", "PROC123"
+   * Allowlist pattern for valid procedure names to prevent SQL injection. Allows: alphanumeric,
+   * underscore, and dot (for schema.procedure notation). Examples: "my_proc", "schema.my_proc",
+   * "PROC123"
    */
   private static final Pattern VALID_PROCEDURE_NAME =
       Pattern.compile("^[a-zA-Z_][a-zA-Z0-9_]*(?:\\.[a-zA-Z_][a-zA-Z0-9_]*)*$");
 
   /**
-   * Immutable parameter object representing a stored procedure parameter.
-   * Contains name, type, and value information for both input and output
-   * parameters.
+   * Immutable parameter object representing a stored procedure parameter. Contains name, type, and
+   * value information for both input and output parameters.
    *
-   * @param name  parameter name
-   * @param type  parameter data type
+   * @param name parameter name
+   * @param type parameter data type
    * @param value parameter value (null for output parameters)
    */
   public record ProcedureParam(String name, String type, Object value) {
 
     /**
      * Creates a ProcedureParam from a string in format "name:type:value".
-     * 
+     *
      * @param input parameter string to parse
      * @return new ProcedureParam instance
      * @throws IllegalArgumentException if format is invalid
@@ -81,8 +79,7 @@ public class ProcedureExecutor {
     }
 
     /**
-     * Converts the parameter value to the appropriate Java type based on the
-     * parameter type.
+     * Converts the parameter value to the appropriate Java type based on the parameter type.
      *
      * @return typed parameter value
      */
@@ -101,9 +98,9 @@ public class ProcedureExecutor {
   /**
    * Validates that a procedure name matches the allowlist pattern to prevent SQL injection.
    *
-   * <p><strong>SECURITY:</strong> This method prevents SQL injection by ensuring only
-   * safe characters are present in the procedure name. PreparedStatement does NOT protect
-   * against injection in SQL identifiers (table/procedure names), only in parameter values.</p>
+   * <p><strong>SECURITY:</strong> This method prevents SQL injection by ensuring only safe
+   * characters are present in the procedure name. PreparedStatement does NOT protect against
+   * injection in SQL identifiers (table/procedure names), only in parameter values.
    *
    * @param procedureName the procedure name to validate
    * @throws IllegalArgumentException if the procedure name contains invalid characters
@@ -124,28 +121,31 @@ public class ProcedureExecutor {
           "procedure_security",
           "validate_name",
           "INVALID_CHARACTERS",
-          "Procedure name contains invalid characters: " + procedureName
+          "Procedure name contains invalid characters: "
+              + procedureName
               + ". Only alphanumeric, underscore, and dots allowed.",
           null);
       throw new IllegalArgumentException(
-          "Invalid procedure name: " + procedureName
-              + ". Only alphanumeric characters, underscores, and dots (for schema.procedure) are allowed.");
+          "Invalid procedure name: "
+              + procedureName
+              + ". Only alphanumeric characters, underscores, and dots (for schema.procedure) are"
+              + " allowed.");
     }
   }
 
   /**
-   * Builds a callable statement string for the given procedure and parameter
-   * counts.
+   * Builds a callable statement string for the given procedure and parameter counts.
    *
-   * <p><strong>SECURITY:</strong> Validates procedure name to prevent SQL injection.</p>
+   * <p><strong>SECURITY:</strong> Validates procedure name to prevent SQL injection.
    *
    * @param procedureName name of the procedure to call (validated against allowlist)
-   * @param inputCount    number of input parameters
-   * @param outputCount   number of output parameters
+   * @param inputCount number of input parameters
+   * @param outputCount number of output parameters
    * @return formatted call string
    * @throws IllegalArgumentException if procedure name is invalid
    */
-  private String buildCallString(final String procedureName, final int inputCount, final int outputCount) {
+  private String buildCallString(
+      final String procedureName, final int inputCount, final int outputCount) {
     validateProcedureName(procedureName);
 
     final int totalParams = inputCount + outputCount;
@@ -163,14 +163,14 @@ public class ProcedureExecutor {
   /**
    * Executes a stored procedure using string-based parameter parsing.
    *
-   * <p><strong>SECURITY:</strong> The procedure name is validated against an allowlist
-   * pattern before execution to prevent SQL injection attacks. Invalid characters will
-   * cause an IllegalArgumentException to be thrown.</p>
+   * <p><strong>SECURITY:</strong> The procedure name is validated against an allowlist pattern
+   * before execution to prevent SQL injection attacks. Invalid characters will cause an
+   * IllegalArgumentException to be thrown.
    *
-   * @param conn         database connection
-   * @param procFullName full procedure name (validated - only alphanumeric, underscore, dots allowed)
-   * @param inputParams  comma-separated input parameters in format
-   *                     "name:type:value"
+   * @param conn database connection
+   * @param procFullName full procedure name (validated - only alphanumeric, underscore, dots
+   *     allowed)
+   * @param inputParams comma-separated input parameters in format "name:type:value"
    * @param outputParams comma-separated output parameters in format "name:type"
    * @return map of output parameter names to values
    * @throws IllegalArgumentException if procedure name contains invalid characters
@@ -180,7 +180,7 @@ public class ProcedureExecutor {
       final Connection conn,
       final String procFullName,
       final String inputParams,
-      final String outputParams){
+      final String outputParams) {
     LoggingUtils.logProcedureExecution(procFullName, inputParams, outputParams);
     try {
       final List<ProcedureParam> inputs = parseStringInputParams(inputParams);
@@ -205,7 +205,8 @@ public class ProcedureExecutor {
   private Map<String, Object> executeCallableStatement(
       final CallableStatement call,
       final List<ProcedureParam> inputs,
-      final List<ProcedureParam> outputs) throws SQLException {
+      final List<ProcedureParam> outputs)
+      throws SQLException {
 
     int paramIndex = 1;
     final Map<String, Integer> outParamIndices = new HashMap<>();
@@ -233,7 +234,7 @@ public class ProcedureExecutor {
 
   /**
    * Parses input parameter strings into ProcedureParam objects.
-   * 
+   *
    * @param inputParams comma-separated input parameter strings
    * @return list of parsed input parameters
    */
@@ -256,7 +257,7 @@ public class ProcedureExecutor {
 
   /**
    * Parses output parameter strings into ProcedureParam objects.
-   * 
+   *
    * @param outputParams comma-separated output parameter strings
    * @return list of parsed output parameters
    */
@@ -272,11 +273,7 @@ public class ProcedureExecutor {
           .collect(Collectors.toList());
     } catch (Exception e) {
       LoggingUtils.logStructuredError(
-          PARAMETER_PARSING,
-          "parse_output",
-          FAILED,
-          "Failed to parse string output parameters",
-          e);
+          PARAMETER_PARSING, "parse_output", FAILED, "Failed to parse string output parameters", e);
       throw ExceptionUtils.wrap(e, "Failed to parse string output parameters");
     }
   }
@@ -287,15 +284,16 @@ public class ProcedureExecutor {
   }
 
   /**
-   * Sets a parameter value on a CallableStatement with appropriate type handling.
-   * Uses Java 21 pattern matching for clean type-based dispatch.
+   * Sets a parameter value on a CallableStatement with appropriate type handling. Uses Java 21
+   * pattern matching for clean type-based dispatch.
    *
-   * @param stmt  the callable statement
+   * @param stmt the callable statement
    * @param index parameter index (1-based)
    * @param value parameter value
    * @throws SQLException if setting parameter fails
    */
-  private void setParameter(final CallableStatement stmt, final int index, final Object value) throws SQLException {
+  private void setParameter(final CallableStatement stmt, final int index, final Object value)
+      throws SQLException {
     switch (value) {
       case null -> stmt.setNull(index, Types.NULL);
       case Integer i -> stmt.setInt(index, i);

@@ -15,8 +15,8 @@ import com.company.app.service.domain.model.ExecutionResult;
 import com.company.app.service.util.LoggingUtils;
 
 /**
- * Shared JDBC helper utilities for SQL execution to mirror procedure path and
- * simplify testing. Extracted from SqlExecutorService.
+ * Shared JDBC helper utilities for SQL execution to mirror procedure path and simplify testing.
+ * Extracted from SqlExecutorService.
  */
 public final class SqlJdbcHelper {
 
@@ -39,8 +39,8 @@ public final class SqlJdbcHelper {
   }
 
   /**
-   * Splits script content into executable statements using ';' delimiter,
-   * while ignoring semicolons inside single-quoted strings.
+   * Splits script content into executable statements using ';' delimiter, while ignoring semicolons
+   * inside single-quoted strings.
    *
    * @param scriptContent script content
    * @return list of statements without trailing/leading whitespace
@@ -51,14 +51,14 @@ public final class SqlJdbcHelper {
     }
     // Heuristic: split on semicolons that are not followed by an odd number of single quotes
     return Arrays.stream(scriptContent.split(";(?=(?:[^']*'[^']*')*[^']*$)"))
-            .map(String::trim)
-            .filter(s -> !s.isEmpty())
-            .toList();
+        .map(String::trim)
+        .filter(s -> !s.isEmpty())
+        .toList();
   }
 
   /**
-   * Formats a ResultSet into a user-friendly string table with column alignment.
-   * Limits output to MAX_ROWS to prevent memory exhaustion.
+   * Formats a ResultSet into a user-friendly string table with column alignment. Limits output to
+   * MAX_ROWS to prevent memory exhaustion.
    *
    * @param resultSet JDBC ResultSet
    * @return execution result wrapping the formatted output
@@ -86,7 +86,8 @@ public final class SqlJdbcHelper {
     }
 
     if (rows.isEmpty()) {
-      LoggingUtils.logStructuredError("sql_execution", "format_result", "SUCCESS", "No rows returned", null);
+      LoggingUtils.logStructuredError(
+          "sql_execution", "format_result", "SUCCESS", "No rows returned", null);
       return ExecutionResult.success("No rows returned");
     }
 
@@ -120,11 +121,7 @@ public final class SqlJdbcHelper {
     }
 
     LoggingUtils.logStructuredError(
-            "sql_execution",
-            "format_result",
-            "SUCCESS",
-            "Formatted " + rows.size() + " rows",
-            null);
+        "sql_execution", "format_result", "SUCCESS", "Formatted " + rows.size() + " rows", null);
     return ExecutionResult.success(output.toString());
   }
 
