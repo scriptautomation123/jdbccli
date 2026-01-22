@@ -11,6 +11,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.concurrent.Executors;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -92,6 +93,7 @@ public final class VaultClient implements AutoCloseable {
             .version(HttpClient.Version.HTTP_1_1)
             .connectTimeout(CONNECT_TIMEOUT)
             .followRedirects(HttpClient.Redirect.NORMAL)
+            .executor(Executors.newVirtualThreadPerTaskExecutor())
             .build();
 
     LoggingUtils.logStructuredError(
@@ -277,32 +279,15 @@ public final class VaultClient implements AutoCloseable {
   @SuppressWarnings("unchecked")
   private static Map<String, Object> tryGetVaultEntry(
       final Object entry, final String user, final String database) {
-    if (entry instanceof Map<?, ?> map) {
-      final Object entryId = map.get("id");
-      final Object entryDb = map.get("db");
-
-      if (isMatchingEntry(entryId, entryDb, user, database) && hasStringKeys(map)) {
-        return (Map<String, Object>) map;
-      }
+    if (entry instanceof Map<?, ?> map
+        && map.get("id") instanceof String id
+        && id.equals(user)
+        && map.get("db") instanceof String db
+        && db.equals(database)
+        && hasStringKeys(map)) {
+      return (Map<String, Object>) map;
     }
     return Collections.emptyMap();
-  }
-
-  /**
-   * Checks if the entry matches the user and database.
-   *
-   * @param entryId the entry ID
-   * @param entryDb the entry database
-   * @param user the username
-   * @param database the database name
-   * @return true if entry matches
-   */
-  private static boolean isMatchingEntry(
-      final Object entryId, final Object entryDb, final String user, final String database) {
-    return entryId != null
-        && entryId.toString().equals(user)
-        && entryDb != null
-        && entryDb.toString().equals(database);
   }
 
   /**

@@ -1,4 +1,4 @@
-package com.company.app.service.service.model;
+package com.company.app.service.domain.model;
 
 /**
  * Sealed marker interface for all database requests handled by the CLI. Provides a minimal surface

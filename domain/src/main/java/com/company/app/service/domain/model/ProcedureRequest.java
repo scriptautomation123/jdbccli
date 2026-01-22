@@ -1,4 +1,4 @@
-package com.company.app.service.service.model;
+package com.company.app.service.domain.model;
 
 import java.util.Objects;
 import java.util.Optional;

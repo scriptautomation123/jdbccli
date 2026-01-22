@@ -56,8 +56,7 @@ public class YamlConfig {
     String[] parts = key.split("\\.");
     Object current = config;
     for (String part : parts) {
-      if (current instanceof Map<?, ?>) {
-        Map<?, ?> map = (Map<?, ?>) current;
+      if (current instanceof Map<?, ?> map) {
         current = map.get(part);
       } else {
         return null;

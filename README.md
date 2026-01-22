@@ -1,16 +1,144 @@
-# run all tests
+# JDBC CLI
+
+A command-line tool for executing SQL queries and stored procedures against various databases with HashiCorp Vault integration for secure password management.
+
+## Features
+
+- Execute SQL statements and scripts
+- Execute stored procedures with input/output parameters
+- Oracle PL/SQL block support (BEGIN...END with `/` delimiter)
+- HashiCorp Vault integration for password resolution
+- Support for Oracle, PostgreSQL, MySQL, H2
+
+## Quick Start
+
+### Run all tests
 
 ```bash
 cd docker && docker compose down -v && docker compose up -d && cd ..
 ./run_all_tests.sh
 ```
-## Generate aggregate SBOM for all modules
+
+### Generate SBOM
+
+```bash
+# Aggregate SBOM for all modules
 mvn cyclonedx:makeAggregateBom
 
-## Or generate SBOM for individual modules
+# Or generate SBOM for individual modules
 mvn cyclonedx:makeBom
+```
 
-## 0. Execute basic SQL query
+### SBOM Dependency Report
+
+Generate a visual report of dependencies, transitive dependencies, and version conflicts:
+
+```bash
+# First generate the SBOM
+mvn cyclonedx:makeAggregateBom
+
+# Then run the report generator
+mvn compile -pl util -q
+java -cp util/target/classes \
+  com.company.app.service.util.SbomReportGenerator target/sbom.xml
+```
+
+**Report includes:**
+
+- 📊 Summary of internal modules vs external libraries
+- ⚠️ Version conflict detection with recommendations
+- 🌳 Dependency tree with transitive dependencies
+- 📜 License summary for compliance review
+- 📚 External dependencies table
+
+Example output:
+
+```text
+╔══════════════════════════════════════════════════════════════════╗
+║                    SBOM DEPENDENCY REPORT                        ║
+╚══════════════════════════════════════════════════════════════════╝
+
+📄 Source: target/sbom.xml
+📊 Total Components: 17
+
+│ 🏠 Internal Modules:      7                                     │
+│ 📦 External Libraries:   10                                     │
+
+🌳 DEPENDENCY TREE
+📦 🏠 cli-parent:1.0.0
+  ├── 🏠 cli-domain:1.0.0
+  ├── 🏠 cli-util:1.0.0
+    ├── 📚 log4j-api:2.25.3
+    ├── 📚 jackson-databind:2.19.2
+    ...
+```
+
+---
+
+## DuckDB Experimentation (Analytics)
+
+The project includes DuckDB support for experimenting with columnar analytics as an alternative to traditional JDBC for certain workloads.
+
+### When to Use DuckDB vs Oracle JDBC
+
+| Use Case                        | Recommendation |
+| :------------------------------- | :-------------- |
+| Oracle production data          | JDBC           |
+| Stored procedures               | JDBC only      |
+| Local analytics on files        | DuckDB         |
+| Large aggregations (>100K rows) | DuckDB         |
+| Query CSV/Parquet directly      | DuckDB         |
+
+### Run DuckDB Benchmark
+
+Compare DuckDB vs traditional row-store (H2) performance:
+
+```bash
+cd database
+mvn test-compile exec:java \
+  -Dexec.mainClass="com.company.app.service.database.DuckDbExperiment" \
+  -Dexec.classpathScope=test
+```
+
+### Query Files Directly with DuckDB
+
+```bash
+# Query a CSV file
+mvn test-compile exec:java \
+  -Dexec.mainClass="com.company.app.service.database.DuckDbExperiment" \
+  -Dexec.classpathScope=test \
+  -Dexec.args="csv:/path/to/data.csv"
+
+# Query a Parquet file
+mvn test-compile exec:java \
+  -Dexec.mainClass="com.company.app.service.database.DuckDbExperiment" \
+  -Dexec.classpathScope=test \
+  -Dexec.args="parquet:/path/to/data.parquet"
+```
+
+### DuckDB in Code
+
+```java
+// In-memory DuckDB
+try (Connection conn = DuckDbExperiment.createConnection()) {
+    // Query Parquet directly - no ETL needed!
+    ExecutionResult result = DuckDbExperiment.execute(conn,
+        "SELECT * FROM read_parquet('data.parquet') WHERE amount > 100");
+}
+
+// Or use standard JDBC
+try (Connection conn = DriverManager.getConnection("jdbc:duckdb:")) {
+    // Works with existing SqlJdbcHelper
+    ResultSet rs = stmt.executeQuery("SELECT * FROM read_csv_auto('data.csv')");
+    ExecutionResult result = SqlJdbcHelper.formatResultSet(rs);
+}
+```
+
+---
+
+## CLI Usage Examples
+
+### 0. Execute basic SQL query
 
 ```bash
 cd ~/code/scriptautomation123/jdbccli/package-helper/target/dist/cli-1.0.0 &&\
@@ -147,3 +275,75 @@ cd ~/code/scriptautomation123/jdbccli/package-helper/target/dist/cli-1.0.0 &&\
 --database localhost:1521:xe \
 --user hr
 ```
+
+---
+
+## Project Structure
+
+```text
+jdbccli/
+├── cli/           # PicoCLI command implementations
+├── database/      # JDBC services, DuckDB experiment
+├── domain/        # Request/response records (sealed types)
+├── util/          # Logging, exception handling, YAML config
+├── vault-client/  # HashiCorp Vault HTTP client
+└── package-helper/# Fat JAR packaging with JRE
+```
+
+## Java 21 Features Used
+
+- **Sealed interfaces** - `DbRequest` permits only `SqlRequest`, `ProcedureRequest`
+- **Records with withers** - Immutable fluent API for request building
+- **Pattern matching** - Switch expressions with type patterns
+- **Virtual threads** - Used in VaultClient for I/O operations
+- **Text blocks** - Multi-line SQL in code
+
+## Architecture Highlights
+
+- **ScriptParser** - Handles Oracle PL/SQL blocks (BEGIN...END with `/`)
+- **ResultFormatter** - Abstraction point for future Arrow Flight SQL
+- **DatabaseExecutionContext** - Composition over inheritance for DB operations
+
+---
+
+## Code Formatting (Google Java Format)
+
+The project uses **Google Java Format** via the **Spotless Maven Plugin** for consistent code style.
+
+### Quick Commands
+
+```bash
+# Apply formatting to all files
+mvn spotless:apply
+
+# Check formatting compliance (CI/CD)
+mvn spotless:check
+
+# Format specific module only
+mvn -pl util spotless:apply
+mvn -pl database spotless:apply
+```
+
+### Formatting Rules
+
+| Rule                  | Setting                    |
+| :-------------------- | :------------------------- |
+| Indentation           | 2 spaces (Google standard) |
+| Line length           | 100 characters             |
+| Import order          | `java`, `javax`, `org`, `com` |
+| Trailing whitespace   | Removed                    |
+| Unused imports        | Removed                    |
+
+### IDE Integration
+
+**VS Code:** Install [Google Java Format](https://marketplace.visualstudio.com/items?itemName=joseandrade.google-java-format-for-vs-code) extension, enable format on save.
+
+**IntelliJ IDEA:** Install "Google Java Format" plugin from Settings → Plugins.
+
+### Before Committing
+
+```bash
+mvn spotless:apply && mvn spotless:check && git add -A
+```
+
+See [GOOGLE_JAVA_FORMAT_GUIDE.md](GOOGLE_JAVA_FORMAT_GUIDE.md) for detailed configuration and troubleshooting.

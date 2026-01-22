@@ -6,11 +6,14 @@ import com.company.app.service.util.ExceptionUtils;
 import com.company.app.service.util.YamlConfig;
 
 public class ConnectionStringGenerator {
-  private static YamlConfig appConfig = null;
+
+  /** Lazy, thread-safe config holder using initialization-on-demand idiom. */
+  private static final class ConfigHolder {
+    static final YamlConfig INSTANCE = new YamlConfig("application.yaml");
+  }
 
   private static YamlConfig getConfig() {
-    appConfig = Objects.requireNonNullElseGet(appConfig, () -> new YamlConfig("application.yaml"));
-    return appConfig;
+    return ConfigHolder.INSTANCE;
   }
 
   /**

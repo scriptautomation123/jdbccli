@@ -1,4 +1,4 @@
-package com.company.app.service.service.model;
+package com.company.app.service.domain.model;
 
 /**
  * Immutable configuration record for Vault authentication parameters. Contains URL, role ID, secret

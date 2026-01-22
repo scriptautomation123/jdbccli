@@ -7,8 +7,8 @@ import java.util.Optional;
 import com.company.app.service.auth.PasswordRequest;
 import com.company.app.service.auth.PasswordResolver;
 import com.company.app.service.database.DatabaseConnectionManager;
+import com.company.app.service.domain.model.DbRequest;
 import com.company.app.service.domain.model.ExecutionResult;
-import com.company.app.service.service.model.DbRequest;
 import com.company.app.service.util.ExceptionUtils;
 import com.company.app.service.util.LoggingUtils;
 

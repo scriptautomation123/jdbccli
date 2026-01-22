@@ -58,15 +58,18 @@ public final class ExceptionUtils {
   public static ExecutionResult handleExecutionException(
       final Exception exception, final String context, final String operation) {
 
-    if (exception instanceof IllegalArgumentException) {
-      LoggingUtils.logStructuredError(
-          context, operation, "FAILED", "Invalid parameters: " + exception.getMessage(), exception);
-      return ExecutionResult.failure(1, "[ERROR] Invalid parameters: " + exception.getMessage());
-    }
-
-    LoggingUtils.logStructuredError(
-        context, operation, "FAILED", "Unexpected error: " + exception.getMessage(), exception);
-    throw wrap(exception, "Failed to execute database operation");
+    return switch (exception) {
+      case IllegalArgumentException ex -> {
+        LoggingUtils.logStructuredError(
+            context, operation, "FAILED", "Invalid parameters: " + ex.getMessage(), ex);
+        yield ExecutionResult.failure(1, "[ERROR] Invalid parameters: " + ex.getMessage());
+      }
+      default -> {
+        LoggingUtils.logStructuredError(
+            context, operation, "FAILED", "Unexpected error: " + exception.getMessage(), exception);
+        throw wrap(exception, "Failed to execute database operation");
+      }
+    };
   }
 
   /**

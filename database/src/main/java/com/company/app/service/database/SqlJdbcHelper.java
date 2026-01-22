@@ -1,9 +1,5 @@
 package com.company.app.service.database;
 
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
@@ -15,8 +11,8 @@ import com.company.app.service.domain.model.ExecutionResult;
 import com.company.app.service.util.LoggingUtils;
 
 /**
- * Shared JDBC helper utilities for SQL execution to mirror procedure path and simplify testing.
- * Extracted from SqlExecutorService.
+ * JDBC helper utilities for SQL result formatting. Script parsing has been moved to {@link
+ * ScriptParser}.
  */
 public final class SqlJdbcHelper {
 
@@ -25,35 +21,6 @@ public final class SqlJdbcHelper {
 
   private SqlJdbcHelper() {
     // utility class
-  }
-
-  /**
-   * Reads the full contents of a script file using UTF-8 encoding.
-   *
-   * @param scriptPath path to the script
-   * @return content of the script file
-   * @throws IOException if reading fails
-   */
-  public static String readScriptFile(final String scriptPath) throws IOException {
-    return Files.readString(Path.of(scriptPath), StandardCharsets.UTF_8);
-  }
-
-  /**
-   * Splits script content into executable statements using ';' delimiter, while ignoring semicolons
-   * inside single-quoted strings.
-   *
-   * @param scriptContent script content
-   * @return list of statements without trailing/leading whitespace
-   */
-  public static List<String> splitStatements(final String scriptContent) {
-    if (scriptContent == null || scriptContent.isBlank()) {
-      return List.of();
-    }
-    // Heuristic: split on semicolons that are not followed by an odd number of single quotes
-    return Arrays.stream(scriptContent.split(";(?=(?:[^']*'[^']*')*[^']*$)"))
-        .map(String::trim)
-        .filter(s -> !s.isEmpty())
-        .toList();
   }
 
   /**

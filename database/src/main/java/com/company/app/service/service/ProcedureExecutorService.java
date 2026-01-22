@@ -6,9 +6,9 @@ import java.util.Map;
 
 import com.company.app.service.auth.PasswordResolver;
 import com.company.app.service.database.ProcedureExecutor;
+import com.company.app.service.domain.model.DbRequest;
 import com.company.app.service.domain.model.ExecutionResult;
-import com.company.app.service.service.model.DbRequest;
-import com.company.app.service.service.model.ProcedureRequest;
+import com.company.app.service.domain.model.ProcedureRequest;
 import com.company.app.service.util.LoggingUtils;
 import com.company.app.service.util.StringUtils;
 
@@ -63,7 +63,7 @@ public final class ProcedureExecutorService {
       return ExecutionResult.failure(1, "[ERROR] Request cannot be null");
     }
 
-    if (!(request instanceof ProcedureRequest)) {
+    if (!(request instanceof ProcedureRequest procedureRequest)) {
       LoggingUtils.logStructuredError(
           PROCEDURE_EXECUTION_EVENT,
           VALIDATION_EVENT,
@@ -73,8 +73,6 @@ public final class ProcedureExecutorService {
       return ExecutionResult.failure(
           1, "[ERROR] " + ERR_UNSUPPORTED_REQUEST + ": " + request.getClass().getName());
     }
-
-    final ProcedureRequest procedureRequest = (ProcedureRequest) request;
 
     // Delegate to execution context with lambda for procedure-specific logic
     return executionContext.executeWithPasswordResolution(

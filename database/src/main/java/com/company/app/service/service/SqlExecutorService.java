@@ -9,10 +9,12 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.company.app.service.auth.PasswordResolver;
+import com.company.app.service.database.ScriptParser;
+import com.company.app.service.database.ScriptParser.ParsedScript;
 import com.company.app.service.database.SqlJdbcHelper;
+import com.company.app.service.domain.model.DbRequest;
 import com.company.app.service.domain.model.ExecutionResult;
-import com.company.app.service.service.model.DbRequest;
-import com.company.app.service.service.model.SqlRequest;
+import com.company.app.service.domain.model.SqlRequest;
 import com.company.app.service.util.LoggingUtils;
 
 /**
@@ -229,17 +231,27 @@ public final class SqlExecutorService {
     LoggingUtils.logSqlScriptExecution(scriptPath);
 
     try {
-      final String scriptContent = SqlJdbcHelper.readScriptFile(scriptPath);
-      final List<String> results = new ArrayList<>();
+      // Parse script into individual statements (separation of concerns)
+      final ParsedScript parsedScript = ScriptParser.parse(scriptPath);
 
-      for (final String statement : SqlJdbcHelper.splitStatements(scriptContent)) {
+      if (parsedScript.isEmpty()) {
+        return ExecutionResult.success("Script contains no executable statements");
+      }
+
+      // Execute each statement sequentially
+      final List<String> results = new ArrayList<>(parsedScript.size());
+      for (final String statement : parsedScript.statements()) {
         final ExecutionResult result = executeStatement(statement, connection);
         results.add(result.getMessage());
       }
 
       final String combinedResults = String.join("\n", results);
       LoggingUtils.logStructuredError(
-          SCRIPT_EXECUTION, "execute_script", SUCCESS, "Script execution completed", null);
+          SCRIPT_EXECUTION,
+          "execute_script",
+          SUCCESS,
+          "Executed %d statements".formatted(parsedScript.size()),
+          null);
       return ExecutionResult.success(combinedResults);
 
     } catch (IOException exception) {

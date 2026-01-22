@@ -1,10 +1,13 @@
 package com.company.app.service;
 
+import java.util.Optional;
+
 import com.company.app.service.auth.PasswordResolver;
 import com.company.app.service.cli.BaseDatabaseCliCommand;
+import com.company.app.service.domain.model.DatabaseRequest;
 import com.company.app.service.domain.model.ExecutionResult;
+import com.company.app.service.domain.model.ProcedureRequest;
 import com.company.app.service.service.ProcedureExecutorService;
-import com.company.app.service.service.model.ProcedureRequest;
 import com.company.app.service.util.ExceptionUtils;
 
 import picocli.CommandLine.Command;
@@ -12,82 +15,84 @@ import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
 
 /**
- * Command-line interface for executing stored procedures with vault authentication. Uses
- * composition-based service architecture for better testability.
+ * Command for executing stored procedures and functions with vault authentication.
+ *
+ * <p><strong>Examples:</strong>
+ *
+ * <pre>
+ * # Simple procedure call
+ * jdbccli exec-proc -t oracle -d "jdbc:oracle:thin:@localhost:1521:xe" -u hr get_employee_count
+ *
+ * # Procedure with IN parameters
+ * jdbccli exec-proc -t oracle -d "jdbc:oracle:thin:@localhost:1521:xe" -u hr \
+ *     update_salary --in "101,5000"
+ *
+ * # Procedure with OUT parameters
+ * jdbccli exec-proc -t oracle -d "jdbc:oracle:thin:@localhost:1521:xe" -u hr \
+ *     get_employee_info --in "101" --out "name:VARCHAR,salary:NUMBER"
+ * </pre>
  */
 @Command(
     name = "exec-proc",
+    aliases = {"proc", "call"},
     mixinStandardHelpOptions = true,
-    description = "Vault-authenticated procedure execution",
-    version = "1.0.0")
+    description = "Execute stored procedures or functions",
+    version = "1.0.0",
+    sortOptions = false)
 public class ExecProcedureCmd extends BaseDatabaseCliCommand {
 
-  /** Stored procedure name to execute */
   @Parameters(
       index = "0",
-      description = "Stored procedure name (e.g., MAV_OWNER.TemplateTable.Onehadoop_proc)",
+      description = "Procedure or function name (e.g., MAV_OWNER.TemplateTable.Onehadoop_proc)",
       arity = "0..1")
-  private String procedure;
+  private String procedureName;
 
-  /** Input parameters in format name:type:value,name:type:value */
-  @Option(names = "--input", description = "Input parameters (name:type:value,name:type:value)")
-  private String input;
+  @Option(
+      names = {"--in-params", "--in", "--input"},
+      description = "Comma-separated IN parameters (name:type:value,name:type:value)")
+  private String inParams;
 
-  /** Output parameters in format name:type,name:type */
-  @Option(names = "--output", description = "Output parameters (name:type,name:type)")
-  private String output;
+  @Option(
+      names = {"--out-params", "--out", "--output"},
+      description = "OUT parameter definitions (name:TYPE,name:TYPE)")
+  private String outParams;
 
-  /** Service for executing stored procedures - uses composition */
   private final ProcedureExecutorService service;
 
-  /**
-   * Constructs a new ExecProcedureCmd with procedure execution service. Initializes service with
-   * password resolver for vault authentication.
-   */
+  /** Default constructor for picocli */
   public ExecProcedureCmd() {
     super();
-    this.service = new ProcedureExecutorService(new PasswordResolver(this::promptForPassword));
+    this.service = null; // Lazy init via getService()
   }
 
-  /**
-   * Package-private constructor for testing with custom service.
-   *
-   * @param service custom procedure executor service
-   */
-  ExecProcedureCmd(final ProcedureExecutorService service) {
+  /** Package-private constructor for testing with injectable service */
+  ExecProcedureCmd(ProcedureExecutorService service) {
     super();
     this.service = service;
   }
 
-  /**
-   * Executes the stored procedure command with vault authentication.
-   *
-   * @return exit code (0 for success, non-zero for failure)
-   */
   @Override
   public Integer call() {
     try {
-      final ProcedureRequest request = buildProcedureRequest();
-      final ExecutionResult result = service.execute(request);
-      result.formatOutput(System.out); // NOSONAR
+      final ProcedureRequest request = buildRequest();
+      final ExecutionResult result = getService().execute(request);
+      result.formatOutput(System.out);
       return result.getExitCode();
-
     } catch (Exception e) {
-      return ExceptionUtils.handleCliException(e, "execute procedure", System.err); // NOSONAR
+      return ExceptionUtils.handleCliException(e, "execute procedure", System.err);
     }
   }
 
-  /**
-   * Builds a procedure request from command-line arguments.
-   *
-   * @return configured procedure request
-   */
-  private ProcedureRequest buildProcedureRequest() {
+  private ProcedureRequest buildRequest() {
     return new ProcedureRequest(
-        new com.company.app.service.service.model.DatabaseRequest(
-            type, database, user, createVaultConfig()),
-        java.util.Optional.ofNullable(procedure),
-        java.util.Optional.ofNullable(input),
-        java.util.Optional.ofNullable(output));
+        new DatabaseRequest(getTypeString(), database, user, createVaultConfig()),
+        Optional.ofNullable(procedureName),
+        Optional.ofNullable(inParams),
+        Optional.ofNullable(outParams));
+  }
+
+  private ProcedureExecutorService getService() {
+    if (service != null) return service;
+    return new ProcedureExecutorService(new PasswordResolver(this::promptForPassword));
   }
 }

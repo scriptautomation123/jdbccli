@@ -4,10 +4,10 @@ import java.util.List;
 
 import com.company.app.service.auth.PasswordResolver;
 import com.company.app.service.cli.BaseDatabaseCliCommand;
+import com.company.app.service.domain.model.DatabaseRequest;
 import com.company.app.service.domain.model.ExecutionResult;
+import com.company.app.service.domain.model.SqlRequest;
 import com.company.app.service.service.SqlExecutorService;
-import com.company.app.service.service.model.DatabaseRequest;
-import com.company.app.service.service.model.SqlRequest;
 import com.company.app.service.util.ExceptionUtils;
 
 import picocli.CommandLine.Command;
@@ -86,7 +86,7 @@ public class ExecSqlCmd extends BaseDatabaseCliCommand {
    */
   private SqlRequest buildSqlRequest() {
     return new SqlRequest(
-        new DatabaseRequest(type, database, user, createVaultConfig()),
+        new DatabaseRequest(getTypeString(), database, user, createVaultConfig()),
         java.util.Optional.ofNullable(sql),
         java.util.Optional.ofNullable(script),
         parseParams(params));

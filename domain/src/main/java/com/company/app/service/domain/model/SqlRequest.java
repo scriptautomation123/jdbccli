@@ -1,4 +1,4 @@
-package com.company.app.service.service.model;
+package com.company.app.service.domain.model;
 
 import java.util.List;
 import java.util.Objects;

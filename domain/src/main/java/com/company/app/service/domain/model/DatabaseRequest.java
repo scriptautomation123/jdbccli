@@ -1,4 +1,4 @@
-package com.company.app.service.service.model;
+package com.company.app.service.domain.model;
 
 /**
  * Core connection details shared by all database requests. Ensures non-blank connection metadata
