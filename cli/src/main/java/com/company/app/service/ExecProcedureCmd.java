@@ -1,13 +1,7 @@
 package com.company.app.service;
 
-import java.util.Optional;
-
-import com.company.app.service.auth.PasswordResolver;
 import com.company.app.service.cli.BaseDatabaseCliCommand;
-import com.company.app.service.domain.model.DatabaseRequest;
 import com.company.app.service.domain.model.ExecutionResult;
-import com.company.app.service.domain.model.ProcedureRequest;
-import com.company.app.service.service.ProcedureExecutorService;
 import com.company.app.service.util.ExceptionUtils;
 
 import picocli.CommandLine.Command;
@@ -15,7 +9,8 @@ import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
 
 /**
- * Command for executing stored procedures and functions with vault authentication.
+ * Command for executing stored procedures and functions with vault authentication. Uses
+ * JdbcCliLibrary for centralized service management.
  *
  * <p><strong>Examples:</strong>
  *
@@ -57,42 +52,28 @@ public class ExecProcedureCmd extends BaseDatabaseCliCommand {
       description = "OUT parameter definitions (name:TYPE,name:TYPE)")
   private String outParams;
 
-  private final ProcedureExecutorService service;
-
   /** Default constructor for picocli */
   public ExecProcedureCmd() {
     super();
-    this.service = null; // Lazy init via getService()
-  }
-
-  /** Package-private constructor for testing with injectable service */
-  ExecProcedureCmd(ProcedureExecutorService service) {
-    super();
-    this.service = service;
   }
 
   @Override
   public Integer call() {
     try {
-      final ProcedureRequest request = buildRequest();
-      final ExecutionResult result = getService().execute(request);
+      final ExecutionResult result =
+          getLibrary()
+              .executeProcedure(
+                  getTypeString(),
+                  database,
+                  user,
+                  procedureName,
+                  inParams,
+                  outParams,
+                  createVaultConfig());
       result.formatOutput(System.out);
       return result.getExitCode();
     } catch (Exception e) {
       return ExceptionUtils.handleCliException(e, "execute procedure", System.err);
     }
-  }
-
-  private ProcedureRequest buildRequest() {
-    return new ProcedureRequest(
-        new DatabaseRequest(getTypeString(), database, user, createVaultConfig()),
-        Optional.ofNullable(procedureName),
-        Optional.ofNullable(inParams),
-        Optional.ofNullable(outParams));
-  }
-
-  private ProcedureExecutorService getService() {
-    if (service != null) return service;
-    return new ProcedureExecutorService(new PasswordResolver(this::promptForPassword));
   }
 }

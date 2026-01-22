@@ -113,7 +113,7 @@
                     <configuration>
                         <java>
                             <googleJavaFormat>
-                                <versionz</version>
+                                <version>1.21.0</version>
                                 <style>GOOGLE</style>
                                 <reflowLongStrings>true</reflowLongStrings>
                             </googleJavaFormat>

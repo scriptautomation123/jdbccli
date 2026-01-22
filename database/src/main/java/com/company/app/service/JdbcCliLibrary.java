@@ -8,8 +8,10 @@ import java.util.function.Supplier;
 import com.company.app.service.auth.PasswordResolver;
 import com.company.app.service.domain.model.DatabaseRequest;
 import com.company.app.service.domain.model.ExecutionResult;
+import com.company.app.service.domain.model.ProcedureRequest;
 import com.company.app.service.domain.model.SqlRequest;
 import com.company.app.service.domain.model.VaultConfig;
+import com.company.app.service.service.ProcedureExecutorService;
 import com.company.app.service.service.SqlExecutorService;
 
 /**
@@ -56,6 +58,9 @@ public final class JdbcCliLibrary {
   /** The underlying SQL executor service */
   private final SqlExecutorService sqlService;
 
+  /** The underlying procedure executor service */
+  private final ProcedureExecutorService procedureService;
+
   /** The password resolver used for authentication */
   private final PasswordResolver passwordResolver;
 
@@ -68,6 +73,7 @@ public final class JdbcCliLibrary {
     this.passwordResolver =
         Objects.requireNonNull(passwordResolver, "PasswordResolver cannot be null");
     this.sqlService = new SqlExecutorService(passwordResolver);
+    this.procedureService = new ProcedureExecutorService(passwordResolver);
   }
 
   /**
@@ -188,6 +194,37 @@ public final class JdbcCliLibrary {
   }
 
   /**
+   * Executes a stored procedure.
+   *
+   * @param dbType database type (oracle, mysql, postgresql, h2)
+   * @param database database connection string (JDBC URL)
+   * @param user database username
+   * @param procedureName stored procedure name
+   * @param inParams input parameters (name:type:value format)
+   * @param outParams output parameters (name:TYPE format)
+   * @param vaultConfig vault configuration for password resolution
+   * @return execution result with exit code and output
+   */
+  public ExecutionResult executeProcedure(
+      final String dbType,
+      final String database,
+      final String user,
+      final String procedureName,
+      final String inParams,
+      final String outParams,
+      final VaultConfig vaultConfig) {
+
+    final ProcedureRequest request =
+        new ProcedureRequest(
+            new DatabaseRequest(dbType, database, user, vaultConfig),
+            Optional.ofNullable(procedureName),
+            Optional.ofNullable(inParams),
+            Optional.ofNullable(outParams));
+
+    return procedureService.execute(request);
+  }
+
+  /**
    * Creates a new SQL request configuration using the modern record-based API.
    *
    * <p><strong>Example:</strong>
@@ -216,6 +253,15 @@ public final class JdbcCliLibrary {
    */
   public SqlExecutorService getSqlService() {
     return sqlService;
+  }
+
+  /**
+   * Gets the underlying procedure executor service for advanced usage.
+   *
+   * @return the ProcedureExecutorService instance
+   */
+  public ProcedureExecutorService getProcedureService() {
+    return procedureService;
   }
 
   /**
@@ -350,11 +396,11 @@ public final class JdbcCliLibrary {
     }
 
     /**
-     * Executes this SQL request configuration using the provided library.
+     * Executes the configured SQL statement or script using the provided library instance.
      *
-     * @param library the JdbcCliLibrary instance to execute with
+     * @param library the JdbcCliLibrary instance to use for execution
      * @return execution result with exit code and output
-     * @throws IllegalStateException if neither sql nor scriptPath is set
+     * @throws IllegalStateException if neither SQL nor script path is set
      */
     public ExecutionResult execute(final JdbcCliLibrary library) {
       if (sql == null && scriptPath == null) {

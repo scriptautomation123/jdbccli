@@ -2,12 +2,8 @@ package com.company.app.service;
 
 import java.util.List;
 
-import com.company.app.service.auth.PasswordResolver;
 import com.company.app.service.cli.BaseDatabaseCliCommand;
-import com.company.app.service.domain.model.DatabaseRequest;
 import com.company.app.service.domain.model.ExecutionResult;
-import com.company.app.service.domain.model.SqlRequest;
-import com.company.app.service.service.SqlExecutorService;
 import com.company.app.service.util.ExceptionUtils;
 
 import picocli.CommandLine.Command;
@@ -16,8 +12,8 @@ import picocli.CommandLine.Parameters;
 
 /**
  * Command-line interface for executing SQL statements with vault authentication. Supports both
- * direct SQL execution and SQL script files with secure password resolution. Uses composition-based
- * service architecture for better testability.
+ * direct SQL execution and SQL script files with secure password resolution. Uses JdbcCliLibrary
+ * for centralized service management.
  */
 @Command(
     name = "exec-sql",
@@ -38,26 +34,9 @@ public class ExecSqlCmd extends BaseDatabaseCliCommand {
   @Option(names = "--params", description = "SQL parameters (value1,value2,value3)")
   private String params;
 
-  /** Service for executing SQL - uses composition */
-  private final SqlExecutorService service;
-
-  /**
-   * Constructs a new ExecSqlCmd with SQL execution service. Initializes service with password
-   * resolver for vault authentication.
-   */
+  /** Default constructor for picocli */
   public ExecSqlCmd() {
     super();
-    this.service = new SqlExecutorService(new PasswordResolver(this::promptForPassword));
-  }
-
-  /**
-   * Package-private constructor for testing with custom service.
-   *
-   * @param service custom SQL executor service
-   */
-  ExecSqlCmd(final SqlExecutorService service) {
-    super();
-    this.service = service;
   }
 
   /**
@@ -68,28 +47,23 @@ public class ExecSqlCmd extends BaseDatabaseCliCommand {
   @Override
   public Integer call() {
     try {
-      final SqlRequest request = buildSqlRequest();
-      final ExecutionResult result = service.execute(request);
+      final ExecutionResult result;
+      if (script != null && !script.isBlank()) {
+        result =
+            getLibrary()
+                .executeScript(getTypeString(), database, user, script, createVaultConfig());
+      } else {
+        result =
+            getLibrary()
+                .executeSql(
+                    getTypeString(), database, user, sql, parseParams(params), createVaultConfig());
+      }
       result.formatOutput(System.out); // NOSONAR
       return result.getExitCode();
 
     } catch (Exception e) {
       return ExceptionUtils.handleCliException(e, "execute SQL", System.err); // NOSONAR
     }
-  }
-
-  /**
-   * Builds a SQL request from command-line arguments. Builds a SQL request from command-line
-   * arguments.
-   *
-   * @return configured SQL request
-   */
-  private SqlRequest buildSqlRequest() {
-    return new SqlRequest(
-        new DatabaseRequest(getTypeString(), database, user, createVaultConfig()),
-        java.util.Optional.ofNullable(sql),
-        java.util.Optional.ofNullable(script),
-        parseParams(params));
   }
 
   /**
