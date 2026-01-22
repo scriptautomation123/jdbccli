@@ -18,7 +18,24 @@ A command-line tool for executing SQL queries and stored procedures against vari
 
 ```bash
 cd docker && docker compose down -v && docker compose up -d && cd ..
-./run_all_tests.sh
+./manage.sh
+```
+
+### Interactive Mode
+
+```bash
+./manage.sh -i
+```
+
+### Available Commands
+
+```bash
+./manage.sh --help           # Show all options
+./manage.sh --spotless       # Format code & commit
+./manage.sh --sbom           # Generate SBOM dependency report
+./manage.sh --build          # Build project only
+./manage.sh --refresh        # Refresh Oracle DB before tests
+./manage.sh --migrate-pkg OLD NEW  # Migrate package paths
 ```
 
 ### Generate SBOM

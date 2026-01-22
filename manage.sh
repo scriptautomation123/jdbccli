@@ -47,7 +47,9 @@ run_spotless() {
 	echo ""
 
 	# Check if there are changes to commit
-	if [[ -n $(git status --porcelain) ]]; then
+	local git_status
+	git_status=$(git status --porcelain) || true
+	if [[ -n ${git_status} ]]; then
 		echo "Staging all changes..."
 		git add -A
 
@@ -130,135 +132,147 @@ migrate_package() {
 	local old_path="${old_pkg//./\/}"
 	local new_path="${new_pkg//./\/}"
 
+	local migrate_script="${PROJECT_DIR}/migrate.sh"
+
+	echo "========================================"
+	echo "Generating Migration Script"
+	echo "========================================"
 	echo ""
 	echo "Migration: ${old_pkg} → ${new_pkg}"
 	echo "Path:      ${old_path} → ${new_path}"
 	echo ""
 
-	# Find all modules with src/main/java
-	local modules=()
-	while IFS= read -r -d '' dir; do
-		modules+=("${dir}")
-	done < <(find "${PROJECT_DIR}" -type d -name "java" -path "*/src/main/*" -print0 2>/dev/null)
+	# Find all Java files first
+	local java_files
+	java_files=$(find "${PROJECT_DIR}" -path "*/${old_path}/*" -name "*.java" -type f 2>/dev/null)
 
-	# Also find test directories
-	while IFS= read -r -d '' dir; do
-		modules+=("${dir}")
-	done < <(find "${PROJECT_DIR}" -type d -name "java" -path "*/src/test/*" -print0 2>/dev/null)
-
-	if [[ ${#modules[@]} -eq 0 ]]; then
-		echo "✗ No Java source directories found"
+	if [[ -z ${java_files} ]]; then
+		echo "✗ No Java files found under ${old_path}"
 		return 1
 	fi
 
-	echo "Found ${#modules[@]} source directories"
-	echo ""
+	local file_count
+	file_count=$(echo "${java_files}" | wc -l)
 
-	# Track files for summary
-	local copied_files=()
-	local old_paths_to_delete=()
+	local generated_date
+	generated_date=$(date) || true
 
-	# Step 1: Create new package structure and copy files
-	echo "Step 1: Creating new package structure and copying files..."
-	echo "────────────────────────────────────────────────────────────"
+	# Start generating the script
+	cat >"${migrate_script}" <<HEADER
+#!/bin/bash
+# Auto-generated package migration script
+# Review this script before running!
+#
+# Migration: ${old_pkg} → ${new_pkg}
+# Generated: ${generated_date}
+# Files: ${file_count}
 
-	for java_root in "${modules[@]}"; do
-		local old_full_path="${java_root}/${old_path}"
+set -e
 
-		if [[ -d ${old_full_path} ]]; then
-			local new_full_path="${java_root}/${new_path}"
+cd "${PROJECT_DIR}"
 
-			# Find all Java files under old path
-			while IFS= read -r -d '' java_file; do
-				# Calculate relative path from old package root
-				local rel_path="${java_file#${old_full_path}/}"
-				local new_file="${new_full_path}/${rel_path}"
-				local new_dir
-				new_dir=$(dirname "${new_file}")
+echo "========================================"
+echo "Package Migration: ${old_pkg} → ${new_pkg}"
+echo "========================================"
+echo ""
 
-				# Create directory and copy
-				mkdir -p "${new_dir}"
-				cp "${java_file}" "${new_file}"
+# Step 1: Create new package structure and copy files
+echo "Step 1: Creating new package structure and copying files..."
+echo "────────────────────────────────────────────────────────────"
 
-				copied_files+=("${new_file}")
-				old_paths_to_delete+=("${java_file}")
+HEADER
 
-				echo "  ✓ $(basename "${java_file}")"
-			done < <(find "${old_full_path}" -name "*.java" -type f -print0 2>/dev/null)
+	local old_dirs_to_delete=()
+
+	# Process each Java file
+	while IFS= read -r java_file; do
+		[[ -z ${java_file} ]] && continue
+
+		# Get the relative path from project root
+		local rel_file="${java_file#"${PROJECT_DIR}"/}"
+
+		# Calculate new file path by replacing old_path with new_path
+		local new_rel_file="${rel_file//${old_path:?}/${new_path}}"
+		local new_dir
+		new_dir=$(dirname "${new_rel_file}")
+
+		# Track the old directory for deletion
+		local old_dir
+		old_dir=$(dirname "${rel_file}")
+		local old_pkg_root="${old_dir%%"${old_path}"*}${old_path}"
+		# Check if already in array (use literal string match)
+		local already_tracked=false
+		for existing in "${old_dirs_to_delete[@]}"; do
+			if [[ ${existing} == "${old_pkg_root}" ]]; then
+				already_tracked=true
+				break
+			fi
+		done
+		if [[ ${already_tracked} == false ]]; then
+			old_dirs_to_delete+=("${old_pkg_root}")
 		fi
+
+		cat >>"${migrate_script}" <<COPY
+mkdir -p "${new_dir}"
+cp "${rel_file}" "${new_rel_file}"
+echo "  ✓ ${new_rel_file}"
+COPY
+	done <<<"${java_files}"
+
+	# Step 2: Fix package declarations and imports
+	cat >>"${migrate_script}" <<STEP2
+
+echo ""
+echo "Step 2: Fixing package declarations and imports..."
+echo "────────────────────────────────────────────────────────────"
+
+# Fix all new files
+find . -path "*/${new_path}/*" -name "*.java" -type f | while read -r file; do
+    sed -i "s/package ${old_pkg}/package ${new_pkg}/g" "\${file}"
+    sed -i "s/import ${old_pkg}/import ${new_pkg}/g" "\${file}"
+    echo "  ✓ Fixed \$(basename "\${file}")"
+done
+
+echo ""
+echo "========================================"
+echo "Migration Complete"
+echo "========================================"
+echo ""
+echo "✓ ${file_count} files copied and updated"
+echo ""
+echo "Next steps:"
+echo "  1. Run: mvn compile"
+echo "  2. Run: mvn test"
+echo "  3. If successful, uncomment and run the deletion commands below"
+echo ""
+
+# ========================================
+# DELETE OLD PATHS (uncomment after verification)
+# ========================================
+# WARNING: Only run these after verifying the new package compiles!
+
+STEP2
+
+	for old_dir in "${old_dirs_to_delete[@]}"; do
+		echo "# rm -rf \"${old_dir}\"" >>"${migrate_script}"
 	done
 
+	chmod +x "${migrate_script}"
+
+	echo "✓ Generated: migrate.sh"
 	echo ""
-	echo "Copied ${#copied_files[@]} files"
+	echo "Files to be migrated: ${file_count}"
 	echo ""
-
-	# Step 2: Fix package declarations and imports in NEW files
-	echo "Step 2: Fixing package declarations and imports..."
-	echo "────────────────────────────────────────────────────────────"
-
-	for file in "${copied_files[@]}"; do
-		# Fix package declaration
-		sed -i "s/package ${old_pkg}/package ${new_pkg}/g" "${file}"
-
-		# Fix imports
-		sed -i "s/import ${old_pkg}/import ${new_pkg}/g" "${file}"
-
-		echo "  ✓ $(basename "${file}")"
-	done
-
-	echo ""
-
-	# Step 3: Also update imports in original files (so both versions compile)
-	echo "Step 3: Summary"
-	echo "────────────────────────────────────────────────────────────"
-	echo ""
-	echo "✓ New package structure created at: ${new_path}"
-	echo "✓ ${#copied_files[@]} files copied and updated"
-	echo ""
-
-	# List old paths to delete
-	if [[ ${#old_paths_to_delete[@]} -gt 0 ]]; then
-		echo "┌─────────────────────────────────────────────────────────────────┐"
-		echo "│ OLD PATHS TO DELETE (after verification)                        │"
-		echo "├─────────────────────────────────────────────────────────────────┤"
-
-		# Group by directory for cleaner output
-		local prev_dir=""
-		for old_file in "${old_paths_to_delete[@]}"; do
-			local dir
-			dir=$(dirname "${old_file}")
-			dir="${dir#${PROJECT_DIR}/}"
-			if [[ ${dir} != "${prev_dir}" ]]; then
-				echo "│"
-				echo "│ 📁 ${dir}"
-				prev_dir="${dir}"
-			fi
-			echo "│    └── $(basename "${old_file}")"
-		done
-
-		echo "│"
-		echo "└─────────────────────────────────────────────────────────────────┘"
-		echo ""
-
-		# Generate delete command
-		echo "To delete old files after verification, run:"
-		echo ""
-		echo "  # Delete old package directories:"
-		for java_root in "${modules[@]}"; do
-			local old_full_path="${java_root}/${old_path}"
-			if [[ -d ${old_full_path} ]]; then
-				local rel_root="${java_root#${PROJECT_DIR}/}"
-				echo "  rm -rf ${rel_root}/${old_path}"
-			fi
-		done
-		echo ""
-	fi
-
-	echo "⚠️  Remember to:"
-	echo "   1. Update pom.xml if it references the old package"
-	echo "   2. Update any configuration files (application.yaml, log4j2.xml)"
-	echo "   3. Run 'mvn compile' to verify"
-	echo "   4. Run tests before deleting old files"
+	echo "┌─────────────────────────────────────────────────────────────────┐"
+	echo "│ REVIEW AND RUN                                                  │"
+	echo "├─────────────────────────────────────────────────────────────────┤"
+	echo "│                                                                 │"
+	echo "│   1. Review:  cat migrate.sh                                    │"
+	echo "│   2. Run:     ./migrate.sh                                      │"
+	echo "│   3. Verify:  mvn compile && mvn test                           │"
+	echo "│   4. Delete:  Edit migrate.sh, uncomment rm commands, re-run    │"
+	echo "│                                                                 │"
+	echo "└─────────────────────────────────────────────────────────────────┘"
 	echo ""
 }
 
