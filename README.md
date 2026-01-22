@@ -81,13 +81,13 @@ The project includes DuckDB support for experimenting with columnar analytics as
 
 ### When to Use DuckDB vs Oracle JDBC
 
-| Use Case                        | Recommendation |
-| :------------------------------- | :-------------- |
-| Oracle production data          | JDBC           |
-| Stored procedures               | JDBC only      |
-| Local analytics on files        | DuckDB         |
-| Large aggregations (>100K rows) | DuckDB         |
-| Query CSV/Parquet directly      | DuckDB         |
+| Use Case                         | Recommendation |
+| :------------------------------- | :------------- |
+| Oracle production data           | JDBC           |
+| Stored procedures                | JDBC only      |
+| Local analytics on files         | DuckDB         |
+| Large aggregations (>100K rows)  | DuckDB         |
+| Query CSV/Parquet directly       | DuckDB         |
 
 ### Run DuckDB Benchmark
 
@@ -326,13 +326,13 @@ mvn -pl database spotless:apply
 
 ### Formatting Rules
 
-| Rule                  | Setting                    |
-| :-------------------- | :------------------------- |
-| Indentation           | 2 spaces (Google standard) |
-| Line length           | 100 characters             |
-| Import order          | `java`, `javax`, `org`, `com` |
-| Trailing whitespace   | Removed                    |
-| Unused imports        | Removed                    |
+| Rule                | Setting                       |
+| :------------------ | :---------------------------- |
+| Indentation         | 2 spaces (Google standard)    |
+| Line length         | 100 characters                |
+| Import order        | `java`, `javax`, `org`, `com` |
+| Trailing whitespace | Removed                       |
+| Unused imports      | Removed                       |
 
 ### IDE Integration
 
