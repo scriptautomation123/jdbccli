@@ -105,6 +105,163 @@ generate_sbom_report() {
 	echo "✓ SBOM report completed"
 }
 
+# Function to migrate package paths (copy, not move)
+migrate_package() {
+	local old_pkg="${1:-com.company.app}"
+	local new_pkg="${2:-}"
+
+	if [[ -z ${new_pkg} ]]; then
+		echo "========================================"
+		echo "Package Migration Tool"
+		echo "========================================"
+		echo ""
+		read -r -p "Enter OLD package path [${old_pkg}]: " input_old
+		old_pkg="${input_old:-${old_pkg}}"
+		read -r -p "Enter NEW package path: " new_pkg
+		if [[ -z ${new_pkg} ]]; then
+			echo "✗ New package path is required"
+			return 1
+		fi
+	fi
+
+	cd "${PROJECT_DIR}" || exit 1
+
+	# Convert package to path (com.company.app -> com/company/app)
+	local old_path="${old_pkg//./\/}"
+	local new_path="${new_pkg//./\/}"
+
+	echo ""
+	echo "Migration: ${old_pkg} → ${new_pkg}"
+	echo "Path:      ${old_path} → ${new_path}"
+	echo ""
+
+	# Find all modules with src/main/java
+	local modules=()
+	while IFS= read -r -d '' dir; do
+		modules+=("${dir}")
+	done < <(find "${PROJECT_DIR}" -type d -name "java" -path "*/src/main/*" -print0 2>/dev/null)
+
+	# Also find test directories
+	while IFS= read -r -d '' dir; do
+		modules+=("${dir}")
+	done < <(find "${PROJECT_DIR}" -type d -name "java" -path "*/src/test/*" -print0 2>/dev/null)
+
+	if [[ ${#modules[@]} -eq 0 ]]; then
+		echo "✗ No Java source directories found"
+		return 1
+	fi
+
+	echo "Found ${#modules[@]} source directories"
+	echo ""
+
+	# Track files for summary
+	local copied_files=()
+	local old_paths_to_delete=()
+
+	# Step 1: Create new package structure and copy files
+	echo "Step 1: Creating new package structure and copying files..."
+	echo "────────────────────────────────────────────────────────────"
+
+	for java_root in "${modules[@]}"; do
+		local old_full_path="${java_root}/${old_path}"
+
+		if [[ -d ${old_full_path} ]]; then
+			local new_full_path="${java_root}/${new_path}"
+
+			# Find all Java files under old path
+			while IFS= read -r -d '' java_file; do
+				# Calculate relative path from old package root
+				local rel_path="${java_file#${old_full_path}/}"
+				local new_file="${new_full_path}/${rel_path}"
+				local new_dir
+				new_dir=$(dirname "${new_file}")
+
+				# Create directory and copy
+				mkdir -p "${new_dir}"
+				cp "${java_file}" "${new_file}"
+
+				copied_files+=("${new_file}")
+				old_paths_to_delete+=("${java_file}")
+
+				echo "  ✓ $(basename "${java_file}")"
+			done < <(find "${old_full_path}" -name "*.java" -type f -print0 2>/dev/null)
+		fi
+	done
+
+	echo ""
+	echo "Copied ${#copied_files[@]} files"
+	echo ""
+
+	# Step 2: Fix package declarations and imports in NEW files
+	echo "Step 2: Fixing package declarations and imports..."
+	echo "────────────────────────────────────────────────────────────"
+
+	for file in "${copied_files[@]}"; do
+		# Fix package declaration
+		sed -i "s/package ${old_pkg}/package ${new_pkg}/g" "${file}"
+
+		# Fix imports
+		sed -i "s/import ${old_pkg}/import ${new_pkg}/g" "${file}"
+
+		echo "  ✓ $(basename "${file}")"
+	done
+
+	echo ""
+
+	# Step 3: Also update imports in original files (so both versions compile)
+	echo "Step 3: Summary"
+	echo "────────────────────────────────────────────────────────────"
+	echo ""
+	echo "✓ New package structure created at: ${new_path}"
+	echo "✓ ${#copied_files[@]} files copied and updated"
+	echo ""
+
+	# List old paths to delete
+	if [[ ${#old_paths_to_delete[@]} -gt 0 ]]; then
+		echo "┌─────────────────────────────────────────────────────────────────┐"
+		echo "│ OLD PATHS TO DELETE (after verification)                        │"
+		echo "├─────────────────────────────────────────────────────────────────┤"
+
+		# Group by directory for cleaner output
+		local prev_dir=""
+		for old_file in "${old_paths_to_delete[@]}"; do
+			local dir
+			dir=$(dirname "${old_file}")
+			dir="${dir#${PROJECT_DIR}/}"
+			if [[ ${dir} != "${prev_dir}" ]]; then
+				echo "│"
+				echo "│ 📁 ${dir}"
+				prev_dir="${dir}"
+			fi
+			echo "│    └── $(basename "${old_file}")"
+		done
+
+		echo "│"
+		echo "└─────────────────────────────────────────────────────────────────┘"
+		echo ""
+
+		# Generate delete command
+		echo "To delete old files after verification, run:"
+		echo ""
+		echo "  # Delete old package directories:"
+		for java_root in "${modules[@]}"; do
+			local old_full_path="${java_root}/${old_path}"
+			if [[ -d ${old_full_path} ]]; then
+				local rel_root="${java_root#${PROJECT_DIR}/}"
+				echo "  rm -rf ${rel_root}/${old_path}"
+			fi
+		done
+		echo ""
+	fi
+
+	echo "⚠️  Remember to:"
+	echo "   1. Update pom.xml if it references the old package"
+	echo "   2. Update any configuration files (application.yaml, log4j2.xml)"
+	echo "   3. Run 'mvn compile' to verify"
+	echo "   4. Run tests before deleting old files"
+	echo ""
+}
+
 # Function to display interactive menu
 show_menu() {
 	echo ""
@@ -118,6 +275,7 @@ show_menu() {
 	echo "  4) Build project           - Maven package"
 	echo "  5) Refresh Oracle DB       - Reset Docker container"
 	echo "  6) Full pipeline           - Build + Test"
+	echo "  7) Migrate package         - Copy classes to new package path"
 	echo "  q) Quit"
 	echo ""
 	echo -n "Select option: "
@@ -151,6 +309,9 @@ run_interactive() {
 			build_project
 			unzip_distribution
 			run_all_tests
+			;;
+		7)
+			migrate_package
 			;;
 		q | Q)
 			echo "Goodbye!"
@@ -438,9 +599,13 @@ show_usage() {
 	echo "  --sbom               Generate SBOM dependency report"
 	echo "  --build              Build project only"
 	echo "  --refresh            Refresh Oracle DB before tests"
+	echo "  --migrate-pkg OLD NEW  Migrate package (copy to new path)"
 	echo "  --help, -h           Show this help"
 	echo ""
 	echo "Without options: runs full build + test pipeline"
+	echo ""
+	echo "Examples:"
+	echo "  $0 --migrate-pkg com.company.app com.newcompany.newapp"
 }
 
 # Parse command line arguments
@@ -458,6 +623,9 @@ case "${1:-}" in
 	setup_java_for_build
 	build_project
 	unzip_distribution
+	;;
+--migrate-pkg)
+	migrate_package "${2:-}" "${3:-}"
 	;;
 --help | -h)
 	show_usage
