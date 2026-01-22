@@ -14,11 +14,157 @@ DB_TYPE="oracle"
 
 # Project paths - find script location dynamically
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-echo "${SCRIPT_DIR}"
 PROJECT_DIR="${SCRIPT_DIR}"
 DIST_DIR="${PROJECT_DIR}/package-helper/target/dist/cli-1.0.0"
 DOCKER_DIR="${PROJECT_DIR}/docker"
 DOCKER_COMPOSE_FILE="${DOCKER_DIR}/docker-compose.yml"
+
+# ========================================
+# Utility Functions
+# ========================================
+
+# Function to run spotless formatting and commit
+run_spotless() {
+	echo "========================================"
+	echo "Running Spotless Format & Check"
+	echo "========================================"
+
+	cd "${PROJECT_DIR}" || exit 1
+
+	echo "Applying spotless formatting..."
+	if ! mvn spotless:apply; then
+		echo "✗ Spotless apply failed"
+		return 1
+	fi
+
+	echo "Checking spotless compliance..."
+	if ! mvn spotless:check; then
+		echo "✗ Spotless check failed"
+		return 1
+	fi
+
+	echo "✓ Spotless completed successfully"
+	echo ""
+
+	# Check if there are changes to commit
+	if [[ -n $(git status --porcelain) ]]; then
+		echo "Staging all changes..."
+		git add -A
+
+		read -r -p "Enter commit message (or press Enter for default): " commit_msg
+		if [[ -z ${commit_msg} ]]; then
+			commit_msg="style: apply spotless formatting"
+		fi
+
+		git commit -m "${commit_msg}"
+		echo "✓ Changes committed"
+
+		read -r -p "Push to remote? (y/N): " push_confirm
+		if [[ ${push_confirm} =~ ^[Yy]$ ]]; then
+			local branch_name
+			branch_name=$(git rev-parse --abbrev-ref HEAD)
+			git push -u origin "${branch_name}"
+			echo "✓ Pushed to origin/${branch_name}"
+		fi
+	else
+		echo "No changes to commit"
+	fi
+	echo ""
+}
+
+# Function to generate SBOM and run report
+generate_sbom_report() {
+	echo "========================================"
+	echo "Generating SBOM Report"
+	echo "========================================"
+
+	cd "${PROJECT_DIR}" || exit 1
+
+	echo "Generating aggregate SBOM..."
+	if ! mvn cyclonedx:makeAggregateBom -q; then
+		echo "✗ SBOM generation failed"
+		return 1
+	fi
+	echo "✓ SBOM generated at target/sbom.xml"
+	echo ""
+
+	echo "Compiling util module..."
+	if ! mvn compile -pl util -q; then
+		echo "✗ Util module compilation failed"
+		return 1
+	fi
+
+	echo ""
+	echo "Running SBOM Report Generator..."
+	echo ""
+
+	java -cp util/target/classes \
+		com.company.app.service.util.SbomReportGenerator target/sbom.xml
+
+	echo ""
+	echo "✓ SBOM report completed"
+}
+
+# Function to display interactive menu
+show_menu() {
+	echo ""
+	echo "╔══════════════════════════════════════════════════════════════════╗"
+	echo "║                    JDBC CLI - Development Menu                   ║"
+	echo "╚══════════════════════════════════════════════════════════════════╝"
+	echo ""
+	echo "  1) Run all tests           - Execute full test suite"
+	echo "  2) Run spotless            - Format code & commit"
+	echo "  3) Generate SBOM report    - Dependency analysis"
+	echo "  4) Build project           - Maven package"
+	echo "  5) Refresh Oracle DB       - Reset Docker container"
+	echo "  6) Full pipeline           - Build + Test"
+	echo "  q) Quit"
+	echo ""
+	echo -n "Select option: "
+}
+
+# Function to run interactive mode
+run_interactive() {
+	while true; do
+		show_menu
+		read -r choice
+
+		case ${choice} in
+		1)
+			run_all_tests
+			;;
+		2)
+			run_spotless
+			;;
+		3)
+			generate_sbom_report
+			;;
+		4)
+			setup_java_for_build
+			build_project
+			;;
+		5)
+			refresh_oracle
+			;;
+		6)
+			setup_java_for_build
+			build_project
+			unzip_distribution
+			run_all_tests
+			;;
+		q | Q)
+			echo "Goodbye!"
+			exit 0
+			;;
+		*)
+			echo "Invalid option: ${choice}"
+			;;
+		esac
+
+		echo ""
+		read -r -p "Press Enter to continue..."
+	done
+}
 
 # Function to verify docker-compose.yml exists
 verify_docker_compose() {
@@ -218,86 +364,121 @@ run_command() {
 	echo ""
 }
 
+# Function to run all tests
+run_all_tests() {
+	echo "========================================"
+	echo "Running CLI Tests"
+	echo "========================================"
+
+	cd "${DIST_DIR}" || {
+		echo "✗ Distribution not found. Run build first."
+		return 1
+	}
+
+	# Find Java runtime
+	JAVA_CMD=$(find_java)
+	echo "Using Java: ${JAVA_CMD}"
+	echo ""
+
+	# 1. Execute basic SQL query
+	run_command "Execute SQL - List Employees" \
+		exec-sql "SELECT * FROM hr.employees WHERE rownum <= 5"
+
+	# 2. Get employee salary (SQL function)
+	run_command "Get Employee Salary" \
+		exec-sql "SELECT hr.hr_pkg.get_employee_salary(100) as salary FROM dual"
+
+	# 3. Get department budget (SQL function)
+	run_command "Get Department Budget" \
+		exec-sql "SELECT hr.hr_pkg.get_department_budget(80) as budget FROM dual"
+
+	# 4. Calculate bonus (SQL function)
+	run_command "Calculate Bonus" \
+		exec-sql "SELECT hr.calculate_bonus(10000, 15) as bonus FROM dual"
+
+	# 5. Get employee details (procedure)
+	run_command "Get Employee Details" \
+		exec-proc hr.get_employee_details \
+		--input "p_employee_id:NUMBER:100" \
+		--output "o_first_name:VARCHAR2,o_last_name:VARCHAR2,o_email:VARCHAR2,o_salary:NUMBER,o_job_id:VARCHAR2"
+
+	# 6. Get department info (procedure)
+	run_command "Get Department Info" \
+		exec-proc hr.get_department_info \
+		--input "p_department_id:NUMBER:80" \
+		--output "o_department_name:VARCHAR2,o_manager_id:NUMBER,o_employee_count:NUMBER,o_total_salary:NUMBER"
+
+	# 7. Raise employee salary (package procedure)
+	run_command "Raise Employee Salary" \
+		exec-proc hr.hr_pkg.raise_employee_salary --input "p_employee_id:NUMBER:100,p_raise_percent:NUMBER:10"
+
+	# 8. Hire new employee (package procedure)
+	run_command "Hire New Employee" \
+		exec-proc hr.hr_pkg.hire_employee --input "p_first_name:VARCHAR2:John,p_last_name:VARCHAR2:Doe,p_email:VARCHAR2:jdoe@example.com,p_job_id:VARCHAR2:IT_PROG,p_salary:NUMBER:8000,p_department_id:NUMBER:60"
+
+	# 9. Update job history (package procedure)
+	run_command "Update Job History" \
+		exec-proc hr.hr_pkg.update_job_history --input "p_employee_id:NUMBER:100,p_new_job_id:VARCHAR2:AD_VP,p_new_department_id:NUMBER:90"
+
+	echo "========================================"
+	echo "All tests completed"
+	echo "========================================"
+}
+
 # ========================================
 # Main Execution
 # ========================================
 
-# Check for --refresh flag
-REFRESH_DB=false
-if [[ ${1} == "--refresh" ]]; then
-	REFRESH_DB=true
-fi
+show_usage() {
+	echo "Usage: $0 [OPTION]"
+	echo ""
+	echo "Options:"
+	echo "  --interactive, -i    Interactive menu mode"
+	echo "  --spotless           Run spotless format & commit"
+	echo "  --sbom               Generate SBOM dependency report"
+	echo "  --build              Build project only"
+	echo "  --refresh            Refresh Oracle DB before tests"
+	echo "  --help, -h           Show this help"
+	echo ""
+	echo "Without options: runs full build + test pipeline"
+}
 
-# Verify docker-compose.yml exists
-verify_docker_compose
+# Parse command line arguments
+case "${1:-}" in
+--interactive | -i)
+	run_interactive
+	;;
+--spotless)
+	run_spotless
+	;;
+--sbom)
+	generate_sbom_report
+	;;
+--build)
+	setup_java_for_build
+	build_project
+	unzip_distribution
+	;;
+--help | -h)
+	show_usage
+	exit 0
+	;;
+--refresh | "")
+	# Default behavior: full pipeline
+	verify_docker_compose
 
-# Optionally refresh Oracle
-if [[ ${REFRESH_DB} == true ]]; then
-	refresh_oracle
-fi
+	if [[ ${1:-} == "--refresh" ]]; then
+		refresh_oracle
+	fi
 
-# Step 1: Setup Java for build
-setup_java_for_build
-
-# Step 2: Build project
-build_project
-
-# Step 3: Unzip distribution
-unzip_distribution
-
-# Step 4: Change to distribution directory
-cd "${DIST_DIR}" || exit 1
-
-# Step 5: Find Java runtime
-JAVA_CMD=$(find_java)
-echo "Using Java: ${JAVA_CMD}"
-echo ""
-
-echo "========================================"
-echo "Running CLI Tests"
-echo "========================================"
-echo ""
-
-# 1. Execute basic SQL query
-run_command "Execute SQL - List Employees" \
-	exec-sql "SELECT * FROM hr.employees WHERE rownum <= 5"
-
-# 2. Get employee salary (SQL function)
-run_command "Get Employee Salary" \
-	exec-sql "SELECT hr.hr_pkg.get_employee_salary(100) as salary FROM dual"
-
-# 3. Get department budget (SQL function)
-run_command "Get Department Budget" \
-	exec-sql "SELECT hr.hr_pkg.get_department_budget(80) as budget FROM dual"
-
-# 4. Calculate bonus (SQL function)
-run_command "Calculate Bonus" \
-	exec-sql "SELECT hr.calculate_bonus(10000, 15) as bonus FROM dual"
-
-# 5. Get employee details (procedure)
-run_command "Get Employee Details" \
-	exec-proc hr.get_employee_details \
-	--input "p_employee_id:NUMBER:100" \
-	--output "o_first_name:VARCHAR2,o_last_name:VARCHAR2,o_email:VARCHAR2,o_salary:NUMBER,o_job_id:VARCHAR2"
-
-# 6. Get department info (procedure)
-run_command "Get Department Info" \
-	exec-proc hr.get_department_info \
-	--input "p_department_id:NUMBER:80" \
-	--output "o_department_name:VARCHAR2,o_manager_id:NUMBER,o_employee_count:NUMBER,o_total_salary:NUMBER"
-
-# 7. Raise employee salary (package procedure)
-run_command "Raise Employee Salary" \
-	exec-proc hr.hr_pkg.raise_employee_salary --input "p_employee_id:NUMBER:100,p_raise_percent:NUMBER:10"
-
-# 8. Hire new employee (package procedure)
-run_command "Hire New Employee" \
-	exec-proc hr.hr_pkg.hire_employee --input "p_first_name:VARCHAR2:John,p_last_name:VARCHAR2:Doe,p_email:VARCHAR2:jdoe@example.com,p_job_id:VARCHAR2:IT_PROG,p_salary:NUMBER:8000,p_department_id:NUMBER:60"
-
-# 9. Update job history (package procedure)
-run_command "Update Job History" \
-	exec-proc hr.hr_pkg.update_job_history --input "p_employee_id:NUMBER:100,p_new_job_id:VARCHAR2:AD_VP,p_new_department_id:NUMBER:90"
-
-echo "========================================"
-echo "All tests completed"
-echo "========================================"
+	setup_java_for_build
+	build_project
+	unzip_distribution
+	run_all_tests
+	;;
+*)
+	echo "Unknown option: ${1}"
+	show_usage
+	exit 1
+	;;
+esac
