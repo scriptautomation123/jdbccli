@@ -1,4 +1,6 @@
 # JDBC CLI
+Essentially, CLI classes use the jdbchelper builder class to do db oerpations, everything else is supporting
+
 
 A command-line tool for executing SQL queries and stored procedures against various databases with HashiCorp Vault integration for secure password management.
 
