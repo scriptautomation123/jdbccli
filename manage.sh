@@ -110,7 +110,7 @@ generate_sbom_report() {
 # Function to migrate package paths (copy, not move)
 migrate_package() {
 	local old_pkg="${1:-com.company.app}"
-	local new_pkg="${2:-}"
+	local new_pkg="${2-}"
 
 	if [[ -z ${new_pkg} ]]; then
 		echo "========================================"
@@ -276,6 +276,223 @@ STEP2
 	echo ""
 }
 
+# Function to check and install development tools
+check_and_install_dev_tools() {
+	echo "========================================"
+	echo "Development Tools Setup"
+	echo "========================================"
+	echo ""
+
+	local needs_install=false
+	local missing_tools=()
+
+	# Check SDKMAN
+	if [[ ! -d "${HOME}/.sdkman" ]]; then
+		echo "✗ SDKMAN not installed"
+		missing_tools+=("sdkman")
+		needs_install=true
+	else
+		echo "✓ SDKMAN installed"
+	fi
+
+	# Check Java 21
+	local java_21_found=false
+	if [[ -d "${HOME}/.sdkman/candidates/java/21-tem" ]] || [[ -d "${HOME}/.sdkman/candidates/java/21-open" ]]; then
+		echo "✓ Java 21 installed (SDKMAN)"
+		java_21_found=true
+	elif command -v java &>/dev/null; then
+		local java_version_output java_version_line java_version_full java_version
+		java_version_output=$(java -version 2>&1) || true
+		java_version_line=$(printf '%s' "${java_version_output}" | head -n 1) || true
+		java_version_full=$(printf '%s' "${java_version_line}" | awk -F '"' '{print $2}') || true
+		java_version=$(printf '%s' "${java_version_full}" | cut -d'.' -f1) || true
+		if [[ ${java_version} == "21" ]]; then
+			echo "✓ Java 21 installed (system)"
+			java_21_found=true
+		fi
+	fi
+	if [[ ${java_21_found} == false ]]; then
+		echo "✗ Java 21 not installed"
+		missing_tools+=("java21")
+		needs_install=true
+	fi
+
+	# Check Maven
+	if command -v mvn &>/dev/null; then
+		local mvn_version
+		mvn_version=$(mvn -version 2>&1 | head -n 1) || true
+		echo "✓ Maven installed: ${mvn_version}"
+	else
+		echo "✗ Maven not installed"
+		missing_tools+=("maven")
+		needs_install=true
+	fi
+
+	# Check NVM
+	if [[ -d "${HOME}/.nvm" ]] || [[ -n ${NVM_DIR-} ]]; then
+		echo "✓ NVM installed"
+	else
+		echo "✗ NVM not installed"
+		missing_tools+=("nvm")
+		needs_install=true
+	fi
+
+	# Check Node.js
+	if command -v node &>/dev/null; then
+		local node_version
+		node_version=$(node --version) || true
+		echo "✓ Node.js installed: ${node_version}"
+	else
+		echo "✗ Node.js not installed"
+		missing_tools+=("nodejs")
+		needs_install=true
+	fi
+
+	echo ""
+
+	if [[ ${needs_install} == false ]]; then
+		echo "✓ All development tools are already installed!"
+		return 0
+	fi
+
+	echo "Missing tools: ${missing_tools[*]}"
+	echo ""
+	read -r -p "Do you want to install missing tools? (y/N): " install_confirm
+
+	if [[ ! ${install_confirm} =~ ^[Yy]$ ]]; then
+		echo "Installation cancelled."
+		return 0
+	fi
+
+	echo ""
+	echo "========================================"
+	echo "Installing Development Tools"
+	echo "========================================"
+	echo ""
+
+	# Install SDKMAN
+	if [[ " ${missing_tools[*]} " =~ " sdkman " ]]; then
+		echo "Installing SDKMAN..."
+		local install_script
+		install_script=$(curl -s "https://get.sdkman.io") || true
+		if [[ -n ${install_script} ]] && printf '%s' "${install_script}" | bash; then
+			echo "✓ SDKMAN installed successfully"
+			# Source SDKMAN for current session
+			# shellcheck disable=SC1091
+			if [[ -s "${HOME}/.sdkman/bin/sdkman-init.sh" ]]; then
+				source "${HOME}/.sdkman/bin/sdkman-init.sh"
+			fi
+		else
+			echo "✗ SDKMAN installation failed"
+		fi
+		echo ""
+	fi
+
+	# Ensure SDKMAN is sourced
+	# shellcheck disable=SC1091
+	if [[ -s "${HOME}/.sdkman/bin/sdkman-init.sh" ]]; then
+		source "${HOME}/.sdkman/bin/sdkman-init.sh"
+	fi
+
+	# Install Java 21
+	if [[ " ${missing_tools[*]} " =~ " java21 " ]]; then
+		if command -v sdk &>/dev/null; then
+			echo "Installing Java 21 (Temurin) via SDKMAN..."
+			if sdk install java 21-tem; then
+				echo "✓ Java 21 installed successfully"
+				sdk default java 21-tem
+			else
+				echo "✗ Java 21 installation failed"
+			fi
+		else
+			echo "✗ Cannot install Java 21: SDKMAN not available"
+			echo "  Please install SDKMAN first or install Java 21 manually"
+		fi
+		echo ""
+	fi
+
+	# Install Maven
+	if [[ " ${missing_tools[*]} " =~ " maven " ]]; then
+		if command -v sdk &>/dev/null; then
+			echo "Installing Maven via SDKMAN..."
+			if sdk install maven; then
+				echo "✓ Maven installed successfully"
+			else
+				echo "✗ Maven installation failed"
+			fi
+		else
+			echo "Installing Maven via apt..."
+			if sudo apt-get update && sudo apt-get install -y maven; then
+				echo "✓ Maven installed successfully"
+			else
+				echo "✗ Maven installation failed"
+			fi
+		fi
+		echo ""
+	fi
+
+	# Install NVM
+	if [[ " ${missing_tools[*]} " =~ " nvm " ]]; then
+		echo "Installing NVM..."
+		local nvm_install_script
+		nvm_install_script=$(curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh) || true
+		if [[ -n ${nvm_install_script} ]] && printf '%s' "${nvm_install_script}" | bash; then
+			echo "✓ NVM installed successfully"
+			# Source NVM for current session
+			export NVM_DIR="${HOME}/.nvm"
+			# shellcheck disable=SC1091
+			if [[ -s "${NVM_DIR}/nvm.sh" ]]; then
+				source "${NVM_DIR}/nvm.sh"
+			fi
+		else
+			echo "✗ NVM installation failed"
+		fi
+		echo ""
+	fi
+
+	# Ensure NVM is sourced
+	export NVM_DIR="${HOME}/.nvm"
+	# shellcheck disable=SC1091
+	if [[ -s "${NVM_DIR}/nvm.sh" ]]; then
+		source "${NVM_DIR}/nvm.sh"
+	fi
+
+	# Install Node.js LTS
+	if [[ " ${missing_tools[*]} " =~ " nodejs " ]]; then
+		if command -v nvm &>/dev/null; then
+			echo "Installing Node.js LTS via NVM..."
+			if nvm install --lts; then
+				echo "✓ Node.js LTS installed successfully"
+				nvm use --lts
+				nvm alias default 'lts/*'
+			else
+				echo "✗ Node.js installation failed"
+			fi
+		else
+			echo "✗ Cannot install Node.js: NVM not available"
+			echo "  Please install NVM first or install Node.js manually"
+		fi
+		echo ""
+	fi
+
+	echo "========================================"
+	echo "Installation Summary"
+	echo "========================================"
+	echo ""
+	echo "Please restart your terminal or run:"
+	echo "  source ~/.bashrc"
+	echo "  # or"
+	echo "  source ~/.zshrc"
+	echo ""
+	echo "Then verify installations:"
+	echo "  sdk version"
+	echo "  java -version"
+	echo "  mvn -version"
+	echo "  nvm --version"
+	echo "  node --version"
+	echo ""
+}
+
 # Function to display interactive menu
 show_menu() {
 	echo ""
@@ -290,6 +507,7 @@ show_menu() {
 	echo "  5) Refresh Oracle DB       - Reset Docker container"
 	echo "  6) Full pipeline           - Build + Test"
 	echo "  7) Migrate package         - Copy classes to new package path"
+	echo "  8) Setup dev tools         - Install SDKMAN, Java 21, Maven, NVM, Node.js"
 	echo "  q) Quit"
 	echo ""
 	echo -n "Select option: "
@@ -326,6 +544,9 @@ run_interactive() {
 			;;
 		7)
 			migrate_package
+			;;
+		8)
+			check_and_install_dev_tools
 			;;
 		q | Q)
 			echo "Goodbye!"
@@ -415,8 +636,26 @@ setup_java_for_build() {
 		fi
 	fi
 
-	echo "✗ ERROR: Java 21 not found. Please install Java 21."
-	exit 1
+	echo "✗ ERROR: Java 21 not found."
+	echo ""
+	echo "Would you like to check and install development tools now?"
+	echo "(This will check for SDKMAN, Java 21, Maven, NVM, Node.js)"
+	echo ""
+	read -r -p "Run setup tools? (y/N): " setup_confirm
+
+	if [[ ${setup_confirm} =~ ^[Yy]$ ]]; then
+		check_and_install_dev_tools
+		echo ""
+		echo "Please restart your terminal or run:"
+		echo "  source ~/.bashrc"
+		echo "Then re-run this script."
+		exit 0
+	else
+		echo ""
+		echo "Please install Java 21 manually or run:"
+		echo "  ./manage.sh --setup-tools"
+		exit 1
+	fi
 }
 
 # Function to build and package the project
@@ -614,6 +853,7 @@ show_usage() {
 	echo "  --build              Build project only"
 	echo "  --refresh            Refresh Oracle DB before tests"
 	echo "  --migrate-pkg OLD NEW  Migrate package (copy to new path)"
+	echo "  --setup-tools        Check and install dev tools (SDKMAN, Java, Maven, NVM, Node.js)"
 	echo "  --help, -h           Show this help"
 	echo ""
 	echo "Without options: runs full build + test pipeline"
@@ -623,7 +863,7 @@ show_usage() {
 }
 
 # Parse command line arguments
-case "${1:-}" in
+case "${1-}" in
 --interactive | -i)
 	run_interactive
 	;;
@@ -639,7 +879,10 @@ case "${1:-}" in
 	unzip_distribution
 	;;
 --migrate-pkg)
-	migrate_package "${2:-}" "${3:-}"
+	migrate_package "${2-}" "${3-}"
+	;;
+--setup-tools)
+	check_and_install_dev_tools
 	;;
 --help | -h)
 	show_usage
@@ -649,7 +892,7 @@ case "${1:-}" in
 	# Default behavior: full pipeline
 	verify_docker_compose
 
-	if [[ ${1:-} == "--refresh" ]]; then
+	if [[ ${1-} == "--refresh" ]]; then
 		refresh_oracle
 	fi
 
