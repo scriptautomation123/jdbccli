@@ -1,5 +1,6 @@
 package com.company.app.service.database;
 
+import com.company.app.service.domain.model.ExecutionResult;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -9,8 +10,6 @@ import java.sql.Statement;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
-
-import com.company.app.service.domain.model.ExecutionResult;
 
 /**
  * Experimental comparison between traditional JDBC and DuckDB for analytics workloads.
@@ -145,8 +144,8 @@ public final class DuckDbExperiment {
       try (Connection duckDb = createConnection();
           Connection h2 = DriverManager.getConnection("jdbc:h2:mem:benchmark")) {
 
-        setupTestData(duckDb, "duckdb");
-        setupTestData(h2, "h2");
+        setupTestData(duckDb);
+        setupTestData(h2);
 
         // Benchmark 1: Simple COUNT
         results.add(
@@ -256,8 +255,7 @@ public final class DuckDbExperiment {
   }
 
   /** Creates test data in the given connection. */
-  private static void setupTestData(final Connection conn, final String dbType)
-      throws SQLException {
+  private static void setupTestData(final Connection conn) throws SQLException {
 
     try (Statement stmt = conn.createStatement()) {
       // Create table
@@ -307,14 +305,16 @@ public final class DuckDbExperiment {
   private static long runQuery(final Connection conn, final String sql) {
     try (Statement stmt = conn.createStatement();
         ResultSet rs = stmt.executeQuery(sql)) {
-      // Consume all results
+      // Consume all results to measure full execution time
+      int rowCount = 0;
       while (rs.next()) {
-        // Just iterate to measure full execution
+        rowCount++;
       }
+      // Row count used to prevent optimization
+      return rowCount > 0 ? 0 : -1;
     } catch (SQLException e) {
       throw new RuntimeException(e);
     }
-    return 0; // Time measured externally
   }
 
   /** Benchmarks two operations and returns comparison. */
@@ -332,10 +332,10 @@ public final class DuckDbExperiment {
     final long duckMs = (duck1 + duck2 + duck3) / 3;
 
     // Measure H2
-    final long h2_1 = timeOp(h2Op);
-    final long h2_2 = timeOp(h2Op);
-    final long h2_3 = timeOp(h2Op);
-    final long h2Ms = (h2_1 + h2_2 + h2_3) / 3;
+    final long h2Run1 = timeOp(h2Op);
+    final long h2Run2 = timeOp(h2Op);
+    final long h2Run3 = timeOp(h2Op);
+    final long h2Ms = (h2Run1 + h2Run2 + h2Run3) / 3;
 
     final double speedup = h2Ms > 0 ? (double) h2Ms / Math.max(1, duckMs) : 1.0;
 
@@ -360,11 +360,11 @@ public final class DuckDbExperiment {
     try (Connection conn = createConnection()) {
       // DuckDB can query Parquet directly - no ETL needed!
       final String sql =
-              """
-              SELECT *
-              FROM read_parquet('%s')
-              LIMIT 10
-              """
+          """
+          SELECT *
+          FROM read_parquet('%s')
+          LIMIT 10
+          """
               .formatted(parquetPath);
 
       ExecutionResult result = execute(conn, sql);
@@ -387,11 +387,11 @@ public final class DuckDbExperiment {
     try (Connection conn = createConnection()) {
       // DuckDB auto-detects CSV structure
       final String sql =
-              """
-              SELECT *
-              FROM read_csv_auto('%s')
-              LIMIT 10
-              """
+          """
+          SELECT *
+          FROM read_csv_auto('%s')
+          LIMIT 10
+          """
               .formatted(csvPath);
 
       ExecutionResult result = execute(conn, sql);

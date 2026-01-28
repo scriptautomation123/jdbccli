@@ -218,7 +218,7 @@ public final class ScriptParser {
     }
 
     // Odd number of quotes toggles the in-string state
-    return (quoteCount % 2 == 1) != currentState;
+    return quoteCount % 2 == 1 != currentState;
   }
 
   /**

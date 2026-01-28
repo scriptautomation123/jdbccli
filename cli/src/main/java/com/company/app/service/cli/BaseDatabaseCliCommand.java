@@ -1,12 +1,10 @@
 package com.company.app.service.cli;
 
+import com.company.app.service.JdbcCliLibrary;
+import com.company.app.service.domain.model.VaultConfig;
 import java.io.Console;
 import java.util.concurrent.Callable;
 import java.util.function.Supplier;
-
-import com.company.app.service.JdbcCliLibrary;
-import com.company.app.service.domain.model.VaultConfig;
-
 import picocli.CommandLine.Model.CommandSpec;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Spec;
@@ -90,6 +88,10 @@ public abstract class BaseDatabaseCliCommand implements Callable<Integer> {
   /** Cached library instance */
   private JdbcCliLibrary library;
 
+  /**
+   * Protected constructor for subclasses. Subclasses must implement {@link #call()} to define
+   * command behavior.
+   */
   protected BaseDatabaseCliCommand() {}
 
   // =====================================================
@@ -105,7 +107,9 @@ public abstract class BaseDatabaseCliCommand implements Callable<Integer> {
 
   protected Supplier<String> createPasswordSupplier() {
     return () -> {
-      if (password != null && !password.isBlank()) return password;
+      if (password != null && !password.isBlank()) {
+        return password;
+      }
       return promptForPassword();
     };
   }
@@ -160,7 +164,7 @@ public abstract class BaseDatabaseCliCommand implements Callable<Integer> {
   }
 
   protected String getTypeString() {
-    return type.name().toLowerCase();
+    return type.name().toLowerCase(java.util.Locale.ROOT);
   }
 
   // =====================================================

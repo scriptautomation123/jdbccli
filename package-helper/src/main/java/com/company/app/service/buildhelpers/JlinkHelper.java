@@ -9,7 +9,7 @@ import java.nio.file.Paths;
 import java.util.Objects;
 import java.util.stream.Stream;
 
-public class JlinkHelper {
+public final class JlinkHelper {
   // Exit codes
   private static final int EXIT_INVALID_ARGS = 1;
   private static final int EXIT_JAR_NOT_FOUND = 2;
@@ -20,6 +20,11 @@ public class JlinkHelper {
 
   // Crypto modules required for Oracle connectivity
   private static final String[] REQUIRED_CRYPTO_MODULES = {"jdk.crypto.ec", "jdk.crypto.cryptoki"};
+
+  /** Private constructor to prevent instantiation. */
+  private JlinkHelper() {
+    // Utility class
+  }
 
   public static void main(String[] args) throws IOException, InterruptedException {
     validateArguments(args);

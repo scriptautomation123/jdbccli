@@ -1,10 +1,5 @@
 package com.company.app.service;
 
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.function.Supplier;
-
 import com.company.app.service.auth.PasswordResolver;
 import com.company.app.service.domain.model.DatabaseRequest;
 import com.company.app.service.domain.model.ExecutionResult;
@@ -13,6 +8,10 @@ import com.company.app.service.domain.model.SqlRequest;
 import com.company.app.service.domain.model.VaultConfig;
 import com.company.app.service.service.ProcedureExecutorService;
 import com.company.app.service.service.SqlExecutorService;
+import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.function.Supplier;
 
 /**
  * Main entry point for external consumers of the JDBC CLI library. Provides a fluent API for
