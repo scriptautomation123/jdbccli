@@ -2,6 +2,7 @@ package com.company.app.service;
 
 import com.company.app.service.util.ExceptionUtils;
 import com.company.app.service.util.LoggingUtils;
+
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 

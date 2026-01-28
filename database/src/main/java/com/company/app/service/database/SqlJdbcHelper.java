@@ -1,13 +1,14 @@
 package com.company.app.service.database;
 
-import com.company.app.service.domain.model.ExecutionResult;
-import com.company.app.service.util.LoggingUtils;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+
+import com.company.app.service.domain.model.ExecutionResult;
+import com.company.app.service.util.LoggingUtils;
 
 /**
  * JDBC helper utilities for SQL result formatting. Script parsing has been moved to {@link

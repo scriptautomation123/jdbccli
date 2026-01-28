@@ -1,6 +1,5 @@
 package com.company.app.service.database;
 
-import com.company.app.service.domain.model.ExecutionResult;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -10,6 +9,8 @@ import java.sql.Statement;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+
+import com.company.app.service.domain.model.ExecutionResult;
 
 /**
  * Experimental comparison between traditional JDBC and DuckDB for analytics workloads.
@@ -360,11 +361,11 @@ public final class DuckDbExperiment {
     try (Connection conn = createConnection()) {
       // DuckDB can query Parquet directly - no ETL needed!
       final String sql =
-          """
-          SELECT *
-          FROM read_parquet('%s')
-          LIMIT 10
-          """
+              """
+              SELECT *
+              FROM read_parquet('%s')
+              LIMIT 10
+              """
               .formatted(parquetPath);
 
       ExecutionResult result = execute(conn, sql);
@@ -387,11 +388,11 @@ public final class DuckDbExperiment {
     try (Connection conn = createConnection()) {
       // DuckDB auto-detects CSV structure
       final String sql =
-          """
-          SELECT *
-          FROM read_csv_auto('%s')
-          LIMIT 10
-          """
+              """
+              SELECT *
+              FROM read_csv_auto('%s')
+              LIMIT 10
+              """
               .formatted(csvPath);
 
       ExecutionResult result = execute(conn, sql);

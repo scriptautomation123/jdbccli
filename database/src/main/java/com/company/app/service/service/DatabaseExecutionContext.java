@@ -1,5 +1,9 @@
 package com.company.app.service.service;
 
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.util.Optional;
+
 import com.company.app.service.auth.PasswordRequest;
 import com.company.app.service.auth.PasswordResolver;
 import com.company.app.service.database.DatabaseConnectionManager;
@@ -7,9 +11,6 @@ import com.company.app.service.domain.model.DbRequest;
 import com.company.app.service.domain.model.ExecutionResult;
 import com.company.app.service.util.ExceptionUtils;
 import com.company.app.service.util.LoggingUtils;
-import java.sql.Connection;
-import java.sql.SQLException;
-import java.util.Optional;
 
 /**
  * Encapsulates the common execution context for database operations. Handles password resolution,

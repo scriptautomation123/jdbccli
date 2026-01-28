@@ -1,5 +1,9 @@
 package com.company.app.service.service;
 
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.util.Map;
+
 import com.company.app.service.auth.PasswordResolver;
 import com.company.app.service.database.ProcedureExecutor;
 import com.company.app.service.domain.model.DbRequest;
@@ -7,9 +11,6 @@ import com.company.app.service.domain.model.ExecutionResult;
 import com.company.app.service.domain.model.ProcedureRequest;
 import com.company.app.service.util.LoggingUtils;
 import com.company.app.service.util.StringUtils;
-import java.sql.Connection;
-import java.sql.SQLException;
-import java.util.Map;
 
 /**
  * Database service implementation for executing stored procedures. Uses composition with

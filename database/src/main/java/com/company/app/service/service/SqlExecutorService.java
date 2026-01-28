@@ -1,5 +1,13 @@
 package com.company.app.service.service;
 
+import java.io.IOException;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.List;
+
 import com.company.app.service.auth.PasswordResolver;
 import com.company.app.service.database.ScriptParser;
 import com.company.app.service.database.ScriptParser.ParsedScript;
@@ -8,13 +16,6 @@ import com.company.app.service.domain.model.DbRequest;
 import com.company.app.service.domain.model.ExecutionResult;
 import com.company.app.service.domain.model.SqlRequest;
 import com.company.app.service.util.LoggingUtils;
-import java.io.IOException;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
-import java.sql.Statement;
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Service for executing SQL statements and scripts with database connections. Uses composition with

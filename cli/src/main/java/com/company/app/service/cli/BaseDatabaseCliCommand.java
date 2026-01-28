@@ -1,10 +1,12 @@
 package com.company.app.service.cli;
 
-import com.company.app.service.JdbcCliLibrary;
-import com.company.app.service.domain.model.VaultConfig;
 import java.io.Console;
 import java.util.concurrent.Callable;
 import java.util.function.Supplier;
+
+import com.company.app.service.JdbcCliLibrary;
+import com.company.app.service.domain.model.VaultConfig;
+
 import picocli.CommandLine.Model.CommandSpec;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Spec;
