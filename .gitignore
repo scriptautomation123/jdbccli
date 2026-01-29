@@ -470,4 +470,3 @@ cython_debug/
 #  - .idea/encodings.xml
 #  - .idea/compile
 t2t-integration-test/.venv
-.trunk/
