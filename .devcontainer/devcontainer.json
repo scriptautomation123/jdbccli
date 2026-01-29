@@ -6,7 +6,7 @@
   "build": {
     "dockerfile": "Dockerfile"
   },
-  
+
   "features": {
     "ghcr.io/devcontainers/features/common-utils:2": {
       "installZsh": true,
@@ -23,10 +23,10 @@
       "nodeGypDependencies": true,
       "installYarnUsingApt": false
     },
-    "ghcr.io/devcontainers/features/python:1": {
-      "version": "latest",
-      "installTools": true
-    },
+    // "ghcr.io/devcontainers/features/python:1": {
+    //   "version": "latest",
+    //   "installTools": true
+    // },
     "ghcr.io/devcontainers/features/java:1": {
       "version": "21",
       "installMaven": "true",
@@ -39,7 +39,7 @@
     "vscode": {
       "extensions": [
         "eamodio.gitlens",
-        "johnpapa.vscode-peacock",
+        // "johnpapa.vscode-peacock",
         "shd101wyy.markdown-preview-enhanced",
         "Upstash.context7-mcp",
         "ms-azuretools.vscode-containers",
