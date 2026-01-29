@@ -19,7 +19,7 @@ public final class JlinkHelper {
   private static final int EXIT_CMD_EXECUTION_FAILED = 10;
 
   // Crypto modules required for Oracle connectivity
-  private static final String[] REQUIRED_CRYPTO_MODULES = {"jdk.crypto.ec", "jdk.crypto.cryptoki"};
+  private static final String[] REQUIRED_CRYPTO_MODULES = { "jdk.crypto.ec", "jdk.crypto.cryptoki" };
 
   /** Private constructor to prevent instantiation. */
   private JlinkHelper() {
@@ -31,6 +31,7 @@ public final class JlinkHelper {
     try {
       runJlinkBuild(args[0], args[1], args[2]);
     } catch (JlinkException e) {
+      // NOSONAR
       System.err.println("[ERROR] " + e.getMessage());
       System.exit(e.getExitCode());
     }
@@ -80,16 +81,15 @@ public final class JlinkHelper {
 
   private static String discoverModules(Path jarPath)
       throws IOException, InterruptedException, JlinkException {
-    String[] jdepsCmd =
-        new String[] {
-          "jdeps",
-          "--print-module-deps",
-          "--ignore-missing-deps",
-          "--multi-release",
-          "21",
-          "--recursive",
-          jarPath.toString()
-        };
+    String[] jdepsCmd = new String[] {
+        "jdeps",
+        "--print-module-deps",
+        "--ignore-missing-deps",
+        "--multi-release",
+        "21",
+        "--recursive",
+        jarPath.toString()
+    };
     System.out.println("[INFO] Running jdeps...");
     String modules = runAndCapture(jdepsCmd);
 
@@ -112,21 +112,20 @@ public final class JlinkHelper {
 
   private static void buildJre(Path jmodsPath, String modules, Path outputJreDir)
       throws IOException, InterruptedException, JlinkException {
-    String[] jlinkCmd =
-        new String[] {
-          "jlink",
-          "--module-path",
-          jmodsPath.toString(),
-          "--add-modules",
-          modules,
-          "--output",
-          outputJreDir.toString(),
-          "--strip-debug",
-          "--no-man-pages",
-          "--no-header-files",
-          "--compress",
-          "zip-2"
-        };
+    String[] jlinkCmd = new String[] {
+        "jlink",
+        "--module-path",
+        jmodsPath.toString(),
+        "--add-modules",
+        modules,
+        "--output",
+        outputJreDir.toString(),
+        "--strip-debug",
+        "--no-man-pages",
+        "--no-header-files",
+        "--compress",
+        "zip-2"
+    };
     System.out.println("[INFO] Running jlink...");
     int jlinkExit = runAndStream(jlinkCmd);
     if (jlinkExit != 0) {
@@ -152,9 +151,8 @@ public final class JlinkHelper {
       Files.createDirectories(jreLibSecurity);
     }
 
-    String javaHome =
-        Objects.requireNonNullElseGet(
-            System.getenv("JAVA_HOME"), () -> System.getProperty("java.home"));
+    String javaHome = Objects.requireNonNullElseGet(
+        System.getenv("JAVA_HOME"), () -> System.getProperty("java.home"));
     Path sourceSecurityDir = Paths.get(javaHome, "lib", "security");
 
     System.out.println("[INFO] Copying Java security files to JRE...");
