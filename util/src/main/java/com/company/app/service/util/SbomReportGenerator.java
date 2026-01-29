@@ -18,20 +18,23 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
- * Generates visual reports from CycloneDX SBOM (Software Bill of Materials) files. Supports both
+ * Generates visual reports from CycloneDX SBOM (Software Bill of Materials)
+ * files. Supports both
  * XML and JSON formats.
  *
- * <p><strong>Features:</strong>
+ * <p>
+ * <strong>Features:</strong>
  *
  * <ul>
- *   <li>Dependency tree visualization
- *   <li>Transitive dependency analysis
- *   <li>Version conflict detection
- *   <li>License summary
- *   <li>Security-relevant metadata
+ * <li>Dependency tree visualization
+ * <li>Transitive dependency analysis
+ * <li>Version conflict detection
+ * <li>License summary
+ * <li>Security-relevant metadata
  * </ul>
  *
- * <p><strong>Usage:</strong>
+ * <p>
+ * <strong>Usage:</strong>
  *
  * <pre>{@code
  * // From command line
@@ -47,21 +50,25 @@ public final class SbomReportGenerator {
   private static final Pattern PURL_PATTERN = Pattern.compile("pkg:maven/([^/]+)/([^@]+)@([^?]+)");
 
   /** Pattern to extract components from XML */
-  private static final Pattern COMPONENT_PATTERN =
-      Pattern.compile(
-          "<component[^>]*>.*?<group>([^<]+)</group>.*?<name>([^<]+)</name>.*?<version>([^<]+)</version>.*?</component>",
-          Pattern.DOTALL);
+  private static final Pattern COMPONENT_PATTERN = Pattern.compile(
+      "<component[^>]*>.*?<group>([^<]+)</group>.*?<name>([^<]+)</name>.*?<version>([^<]+)</version>.*?</component>",
+      Pattern.DOTALL);
 
   /** Pattern to extract licenses */
-  private static final Pattern LICENSE_PATTERN =
-      Pattern.compile("<license>.*?<id>([^<]+)</id>.*?</license>", Pattern.DOTALL);
+  private static final Pattern LICENSE_PATTERN = Pattern.compile("<license>.*?<id>([^<]+)</id>.*?</license>",
+      Pattern.DOTALL);
 
   /** Pattern for dependencies section */
-  private static final Pattern DEPENDENCY_PATTERN =
-      Pattern.compile("<dependency ref=\"([^\"]+)\">(.*?)</dependency>", Pattern.DOTALL);
+  private static final Pattern DEPENDENCY_PATTERN = Pattern.compile("<dependency ref=\"([^\"]+)\">(.*?)</dependency>",
+      Pattern.DOTALL);
 
   /** Pattern for nested dependency refs */
   private static final Pattern DEP_REF_PATTERN = Pattern.compile("<dependency ref=\"([^\"]+)\"/>");
+
+  /** Box-drawing characters for report formatting */
+  private static final String BOX_TOP = "┌─────────────────────────────────────────────────────────────────┐";
+  private static final String BOX_MIDDLE = "├─────────────────────────────────────────────────────────────────┤";
+  private static final String BOX_BOTTOM = "└─────────────────────────────────────────────────────────────────┘";
 
   private SbomReportGenerator() {
     // Utility class
@@ -100,7 +107,7 @@ public final class SbomReportGenerator {
    * Generates a comprehensive SBOM report.
    *
    * @param sbomPath path to sbom.xml or sbom.json
-   * @param out output stream for the report
+   * @param out      output stream for the report
    * @throws IOException if file cannot be read
    */
   public static void generateReport(final Path sbomPath, final PrintStream out) throws IOException {
@@ -197,12 +204,12 @@ public final class SbomReportGenerator {
     final long internal = components.stream().filter(Component::isInternal).count();
     final long external = components.size() - internal;
 
-    out.println("┌─────────────────────────────────────────────────────────────────┐");
+    out.println(BOX_TOP);
     out.println("│ SUMMARY                                                         │");
-    out.println("├─────────────────────────────────────────────────────────────────┤");
+    out.println(BOX_MIDDLE);
     out.printf("│ 🏠 Internal Modules:    %3d                                     │%n", internal);
     out.printf("│ 📦 External Libraries:  %3d                                     │%n", external);
-    out.println("└─────────────────────────────────────────────────────────────────┘");
+    out.println(BOX_BOTTOM);
     out.println();
   }
 
@@ -216,22 +223,20 @@ public final class SbomReportGenerator {
       versionsByArtifact.computeIfAbsent(key, k -> new HashSet<>()).add(c.version());
     }
 
-    final List<VersionConflict> conflicts =
-        versionsByArtifact.entrySet().stream()
-            .filter(e -> e.getValue().size() > 1)
-            .map(
-                e -> {
-                  final String[] parts = e.getKey().split(":");
-                  final List<String> sorted =
-                      e.getValue().stream().sorted(Comparator.reverseOrder()).toList();
-                  return new VersionConflict(
-                      parts[0], parts[1], e.getValue(), "Use latest: " + sorted.get(0));
-                })
-            .toList();
+    final List<VersionConflict> conflicts = versionsByArtifact.entrySet().stream()
+        .filter(e -> e.getValue().size() > 1)
+        .map(
+            e -> {
+              final String[] parts = e.getKey().split(":");
+              final List<String> sorted = e.getValue().stream().sorted(Comparator.reverseOrder()).toList();
+              return new VersionConflict(
+                  parts[0], parts[1], e.getValue(), "Use latest: " + sorted.get(0));
+            })
+        .toList();
 
-    out.println("┌─────────────────────────────────────────────────────────────────┐");
+    out.println(BOX_TOP);
     out.println("│ ⚠️  VERSION CONFLICTS                                            │");
-    out.println("├─────────────────────────────────────────────────────────────────┤");
+    out.println(BOX_MIDDLE);
 
     if (conflicts.isEmpty()) {
       out.println("│ ✅ No version conflicts detected                                │");
@@ -240,7 +245,7 @@ public final class SbomReportGenerator {
         out.println("│ ❌ " + truncate(conflict.toString(), 62) + " │");
       }
     }
-    out.println("└─────────────────────────────────────────────────────────────────┘");
+    out.println(BOX_BOTTOM);
     out.println();
   }
 
@@ -249,24 +254,22 @@ public final class SbomReportGenerator {
       final List<Component> components,
       final Map<String, List<String>> dependencies) {
 
-    out.println("┌─────────────────────────────────────────────────────────────────┐");
+    out.println(BOX_TOP);
     out.println("│ 🌳 DEPENDENCY TREE                                              │");
-    out.println("└─────────────────────────────────────────────────────────────────┘");
+    out.println(BOX_BOTTOM);
     out.println();
 
     // Find root modules (internal components that are not dependencies of others)
-    final Set<String> allDeps =
-        dependencies.values().stream().flatMap(List::stream).collect(Collectors.toSet());
+    final Set<String> allDeps = dependencies.values().stream().flatMap(List::stream).collect(Collectors.toSet());
 
-    final List<Component> roots =
-        components.stream()
-            .filter(Component::isInternal)
-            .filter(c -> !allDeps.contains(c.gav()))
-            .toList();
+    final List<Component> roots = components.stream()
+        .filter(Component::isInternal)
+        .filter(c -> !allDeps.contains(c.gav()))
+        .toList();
 
     // If no clear roots, use internal modules
-    final List<Component> treeRoots =
-        roots.isEmpty() ? components.stream().filter(Component::isInternal).toList() : roots;
+    final List<Component> treeRoots = roots.isEmpty() ? components.stream().filter(Component::isInternal).toList()
+        : roots;
 
     final Set<String> printed = new HashSet<>();
     for (final Component root : treeRoots) {
@@ -283,18 +286,26 @@ public final class SbomReportGenerator {
       final Set<String> printed,
       final List<Component> components) {
 
-    if (depth > 5) return; // Limit depth to avoid stack overflow
+    if (depth > 5) {
+      return; // Limit depth to avoid stack overflow
+    }
 
     final String indent = "  ".repeat(depth);
-    final String prefix = depth == 0 ? "📦 " : (printed.contains(artifact) ? "├── ↩ " : "├── ");
+    final String prefix;
+    if (depth == 0) {
+      prefix = "📦 ";
+    } else if (printed.contains(artifact)) {
+      prefix = "├── ↩ ";
+    } else {
+      prefix = "├── ";
+    }
 
     // Find component details
-    final String shortName =
-        components.stream()
-            .filter(c -> c.gav().equals(artifact))
-            .findFirst()
-            .map(Component::shortName)
-            .orElse(artifact.substring(artifact.lastIndexOf(':') + 1));
+    final String shortName = components.stream()
+        .filter(c -> c.gav().equals(artifact))
+        .findFirst()
+        .map(Component::shortName)
+        .orElse(artifact.substring(artifact.lastIndexOf(':') + 1));
 
     final boolean isInternal = artifact.startsWith("com.company.app");
     final String icon = isInternal ? "🏠" : "📚";
@@ -314,15 +325,14 @@ public final class SbomReportGenerator {
 
   private static void printLicenseSummary(final PrintStream out, final List<Component> components) {
 
-    final Map<String, Long> licenseCounts =
-        components.stream()
-            .filter(c -> !c.isInternal())
-            .collect(
-                Collectors.groupingBy(Component::license, TreeMap::new, Collectors.counting()));
+    final Map<String, Long> licenseCounts = components.stream()
+        .filter(c -> !c.isInternal())
+        .collect(
+            Collectors.groupingBy(Component::license, TreeMap::new, Collectors.counting()));
 
-    out.println("┌─────────────────────────────────────────────────────────────────┐");
+    out.println(BOX_TOP);
     out.println("│ 📜 LICENSE SUMMARY                                              │");
-    out.println("├─────────────────────────────────────────────────────────────────┤");
+    out.println(BOX_MIDDLE);
 
     if (licenseCounts.isEmpty()) {
       out.println("│ No external licenses to report                                  │");
@@ -332,20 +342,19 @@ public final class SbomReportGenerator {
             "│   %-45s %5d component(s) │%n", truncate(entry.getKey(), 45), entry.getValue());
       }
     }
-    out.println("└─────────────────────────────────────────────────────────────────┘");
+    out.println(BOX_BOTTOM);
     out.println();
   }
 
   private static void printExternalDependencies(
       final PrintStream out, final List<Component> components) {
 
-    final List<Component> external =
-        components.stream()
-            .filter(c -> !c.isInternal())
-            .sorted(Comparator.comparing(Component::group).thenComparing(Component::name))
-            .toList();
+    final List<Component> external = components.stream()
+        .filter(c -> !c.isInternal())
+        .sorted(Comparator.comparing(Component::group).thenComparing(Component::name))
+        .toList();
 
-    out.println("┌─────────────────────────────────────────────────────────────────┐");
+    out.println(BOX_TOP);
     out.println("│ 📚 EXTERNAL DEPENDENCIES                                        │");
     out.println("├────────────────────────────────────────────┬────────────────────┤");
     out.println("│ Artifact                                   │ Version            │");
@@ -360,7 +369,9 @@ public final class SbomReportGenerator {
   }
 
   private static String truncate(final String s, final int maxLen) {
-    if (s == null) return "";
+    if (s == null) {
+      return "";
+    }
     return s.length() <= maxLen ? s : s.substring(0, maxLen - 2) + "..";
   }
 
