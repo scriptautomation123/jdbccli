@@ -1,0 +1,55 @@
+{
+    "sonarlint.connectedMode.project": {
+        "connectionId": "scriptautomation123",
+        "projectKey": "scriptautomation123_jdbc-sqlrunner"
+    },
+    "editor.tabSize": 2,
+    "editor.insertSpaces": true,
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "redhat.java",
+    "files.trimTrailingWhitespace": true,
+    "files.insertFinalNewline": true,
+    "files.exclude": {
+        "**/.classpath": true,
+        "**/.project": true,
+        "**/.settings": true,
+        "**/.vscode": false,
+        "**/node_modules": true,
+        "**/.git": true
+    },
+    "search.exclude": {
+        "**/node_modules": true,
+        "**/dist": true,
+        "**/target": true,
+        "**/.git": true
+    },
+    "[java]": {
+        "editor.defaultFormatter": "redhat.java",
+        "editor.formatOnSave": true,
+        "editor.codeActionsOnSave": [
+            "source.fixAll.eslint",
+            "source.organizeImports"
+        ]
+    },
+    "java.debug.settings.hotCodeReplace": "auto",
+    "java.debug.settings.vmArgs": "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005",
+    "java.debug.logLevel": "warn",
+    "java.project.referencedLibraries": [
+        "lib/**/*.jar"
+    ],
+    "java.configuration.runtimes": [
+        {
+            "name": "JavaSE-21",
+            "path": "/usr/local/sdkman/candidates/java/21.0.9-tem",
+            "default": true
+        }
+    ],
+    "java.codeGeneration.useBlocks": true,
+    "java.sources.organizeImports.staticGroupsCount": 1,
+    "redhat.telemetry.enabled": false,
+    "maven.executable.preferMavenWrapper": true,
+    "maven.terminal.useJavaHome": true,
+    "errorLens.enabled": true,
+    "errorLens.onSave": true,
+    "problems.decorations.enabled": true
+}

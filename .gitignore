@@ -2,8 +2,8 @@
 # IDE files
 .idea/
 *.iml
-.vscode/
-.settings/
+
+settings/
 .project
 .classpath
 
@@ -37,25 +37,13 @@ logs/
 *.ear
 
 # Maven wrapper
-.mvn/wrapper/maven-wrapper.jar 
+.mvn/wrapper/maven-wrapper.jar
 
 !README.md
 
 # Ignore all .pmd files
 **/*.pmd
-.prompts
-.vscode/
-.sonarlint
-.cursor/
-.serena/
-.specstory
-logs/
-engineering
-**/target/*
-.cursorignore
-docs/OutputFormatter.java
-todo
-documentation
+
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -469,4 +457,3 @@ cython_debug/
 #  - .idea/codeStyles
 #  - .idea/encodings.xml
 #  - .idea/compile
-t2t-integration-test/.venv

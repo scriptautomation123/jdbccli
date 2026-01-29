@@ -38,22 +38,16 @@
   "customizations": {
     "vscode": {
       "extensions": [
-        // "rafmsou.nicer-high-contrast",
-        // "sdras.night-owl",
-        // "PKief.material-icon-theme",
-        // "EliverLara.andromeda",
-        // "fisheva.eva-theme",
         "eamodio.gitlens",
         "johnpapa.vscode-peacock",
-        // "mechatroner.rainbow-csv",
-        // "Oracle.sql-developer",
         "shd101wyy.markdown-preview-enhanced",
         "Upstash.context7-mcp",
         "ms-azuretools.vscode-containers",
         "formulahendry.code-runner",
         "maciejdems.add-to-gitignore",
         "SonarSource.sonarlint-vscode",
-        "trunk.io"
+        "trunk.io",
+        "usernamehw.errorlens"
       ]
     }
   },

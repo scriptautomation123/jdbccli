@@ -1,0 +1,189 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Test in Docker (Interactive)",
+      "type": "shell",
+      "command": "${workspaceFolder}/partition_swap_demo/test_in_docker.sh",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "dedicated",
+        "showReuseMessage": false,
+        "clear": false
+      },
+      "problemMatcher": [],
+      "group": {
+        "kind": "test",
+        "isDefault": true
+      }
+    },
+    {
+      "label": "maven: clean",
+      "type": "shell",
+      "command": "mvn",
+      "args": ["clean"],
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "maven: compile",
+      "type": "shell",
+      "command": "mvn",
+      "args": ["compile"],
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "maven: clean install",
+      "type": "shell",
+      "command": "mvn",
+      "args": ["clean", "install", "-DskipTests"],
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "maven: test",
+      "type": "shell",
+      "command": "mvn",
+      "args": ["test"],
+      "group": "test",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "maven: package",
+      "type": "shell",
+      "command": "mvn",
+      "args": ["package", "-DskipTests"],
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "spotless: format code",
+      "type": "shell",
+      "command": "mvn",
+      "args": ["spotless:apply"],
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "spotless: check format",
+      "type": "shell",
+      "command": "mvn",
+      "args": ["spotless:check"],
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "sonarqube: analyze",
+      "type": "shell",
+      "command": "mvn",
+      "args": ["clean", "verify", "sonar:sonar"],
+      "group": "test",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "dedicated"
+      }
+    },
+    {
+      "label": "manage: build",
+      "type": "shell",
+      "command": "${workspaceFolder}/manage.sh",
+      "args": ["--build"],
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "dedicated"
+      }
+    },
+    {
+      "label": "manage: interactive",
+      "type": "shell",
+      "command": "${workspaceFolder}/manage.sh",
+      "args": ["-i"],
+      "isBackground": false,
+      "group": "test",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "dedicated"
+      }
+    },
+    {
+      "label": "cyclonedx: generate SBOM",
+      "type": "shell",
+      "command": "mvn",
+      "args": ["cyclonedx:makeAggregateBom"],
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "docker: up",
+      "type": "shell",
+      "command": "cd ${workspaceFolder}/docker && docker-compose up -d",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "docker: down",
+      "type": "shell",
+      "command": "cd ${workspaceFolder}/docker && docker-compose down",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "shared"
+      }
+    }
+  ]
+}

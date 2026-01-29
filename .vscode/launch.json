@@ -1,0 +1,36 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+
+    {
+      "name": "Debug CLI Application",
+      "type": "java",
+      "request": "launch",
+      "mainClass": "com.company.app.service.AieUtilMain",
+      "projectName": "cli",
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "args": "--help",
+      "preLaunchTask": "maven: compile"
+    },
+    {
+      "name": "Debug with Database Module",
+      "type": "java",
+      "request": "launch",
+      "mainClass": "com.company.app.service.database.DatabaseTest",
+      "projectName": "database",
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "Debug Unit Tests",
+      "type": "java",
+      "request": "launch",
+      "mainClass": "",
+      "projectName": "cli",
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "preLaunchTask": "maven: test"
+    }
+  ]
+}
