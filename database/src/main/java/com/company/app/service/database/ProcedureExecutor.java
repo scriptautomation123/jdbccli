@@ -13,7 +13,6 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.StringJoiner;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 import com.company.app.service.util.ExceptionUtils;
 import com.company.app.service.util.LoggingUtils;
@@ -44,7 +43,7 @@ public class ProcedureExecutor {
    * "PROC123"
    */
   private static final Pattern VALID_PROCEDURE_NAME =
-      Pattern.compile("^[a-zA-Z_][a-zA-Z0-9_]*(?:\\.[a-zA-Z_][a-zA-Z0-9_]*)*$");
+      Pattern.compile("^[a-zA-Z_]\\w*+(?:\\.[a-zA-Z_]\\w*+)*+$");
 
   /**
    * Immutable parameter object representing a stored procedure parameter. Contains name, type, and
@@ -154,9 +153,11 @@ public class ProcedureExecutor {
       placeholders.add("?");
     }
 
-    // Safe to concatenate: procedureName has been validated against allowlist pattern
-    // Only alphanumeric, underscore, and dots are allowed - no SQL injection possible
-    //noinspection SqlSourceToSinkFlow
+    // Safe to concatenate: procedureName has been validated against allowlist
+    // pattern
+    // Only alphanumeric, underscore, and dots are allowed - no SQL injection
+    // possible
+    // noinspection SqlSourceToSinkFlow
     return "{call " + procedureName + placeholders + "}";
   }
 
@@ -213,13 +214,15 @@ public class ProcedureExecutor {
 
     // Set input parameters
     for (final ProcedureParam input : inputs) {
-      setParameter(call, paramIndex++, input.getTypedValue());
+      setParameter(call, paramIndex, input.getTypedValue());
+      paramIndex++;
     }
 
     // Register output parameters
     for (final ProcedureParam output : outputs) {
       outParamIndices.put(output.name(), paramIndex);
-      call.registerOutParameter(paramIndex++, getJdbcType(output.type()));
+      call.registerOutParameter(paramIndex, getJdbcType(output.type()));
+      paramIndex++;
     }
 
     // Execute and collect results
@@ -247,7 +250,7 @@ public class ProcedureExecutor {
           .map(String::trim)
           .filter(s -> s.contains(":"))
           .map(ProcedureParam::fromString)
-          .collect(Collectors.toList());
+          .toList();
     } catch (Exception e) {
       LoggingUtils.logStructuredError(
           PARAMETER_PARSING, "parse_input", FAILED, "Failed to parse string input parameters", e);
@@ -270,7 +273,7 @@ public class ProcedureExecutor {
           .map(String::trim)
           .filter(s -> s.contains(":"))
           .map(this::createOutputParam)
-          .collect(Collectors.toList());
+          .toList();
     } catch (Exception e) {
       LoggingUtils.logStructuredError(
           PARAMETER_PARSING, "parse_output", FAILED, "Failed to parse string output parameters", e);

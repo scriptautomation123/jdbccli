@@ -13,7 +13,7 @@ services:
     volumes:
       - ./init:/docker-entrypoint-initdb.d
     healthcheck:
-      test: [CMD, oracle, healthcheck]
+      test: ["CMD-SHELL", "echo 'SELECT 1 FROM DUAL;' | sqlplus -s sys/password@localhost:1521/XE as sysdba | grep -q '^1'"]
       interval: 10s
       timeout: 5s
       retries: 20
