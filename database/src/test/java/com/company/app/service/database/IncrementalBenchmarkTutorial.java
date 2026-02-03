@@ -364,7 +364,7 @@ public final class IncrementalBenchmarkTutorial {
 
       BenchmarkStats stats = runBenchmark("Variable Workload", variableTask, 5, 50);
 
-      System.out.println("Results with simulated 5% slow requests:");
+      System.out.println("Results with simulated 8% slow requests:");
       System.out.println("────────────────────────────────────────────────");
       System.out.println(stats);
 
@@ -521,8 +521,17 @@ SUMMARY:
    */
   public static class Lesson5DatabaseOptimizations {
 
+    /** Total rows to insert per benchmark iteration */
     private static final int BATCH_SIZE = 1000;
+
+    /** Total rows for query benchmarks */
     private static final int TOTAL_ROWS = 5000;
+
+    /** Number of rows to accumulate before executing a batch flush */
+    private static final int BATCH_FLUSH_SIZE = 100;
+
+    /** Number of rows to accumulate before executing a batch flush for large data setup */
+    private static final int SETUP_BATCH_FLUSH_SIZE = 1000;
 
     /**
      * Demonstrates real database optimizations with H2 (in-memory). We'll show: 1. Statement vs
@@ -684,7 +693,7 @@ SUMMARY:
                   pstmt.setString(4, "Category" + (i % 5));
                   pstmt.addBatch();
 
-                  if (i % 100 == 0) {
+                  if (i % BATCH_FLUSH_SIZE == 0) {
                     pstmt.executeBatch();
                   }
                 }
@@ -779,7 +788,7 @@ SUMMARY:
           pstmt.setDouble(3, i * 1.0);
           pstmt.setString(4, "Category" + (i % 5));
           pstmt.addBatch();
-          if (i % 1000 == 0) pstmt.executeBatch();
+          if (i % SETUP_BATCH_FLUSH_SIZE == 0) pstmt.executeBatch();
         }
         pstmt.executeBatch();
         conn.commit();
