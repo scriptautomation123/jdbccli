@@ -243,6 +243,32 @@
       }
     },
     {
+      "label": "manage: run",
+      "type": "shell",
+      "command": "${workspaceFolder}/manage.sh",
+      "args": ["--run"],
+      "group": "test",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "dedicated"
+      }
+    },
+    {
+      "label": "manage: refresh",
+      "type": "shell",
+      "command": "${workspaceFolder}/manage.sh",
+      "args": ["--refresh"],
+      "group": "test",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "dedicated"
+      }
+    },
+    {
       "label": "cyclonedx: generate SBOM",
       "type": "shell",
       "command": "mvn",
@@ -258,7 +284,7 @@
     {
       "label": "docker: up",
       "type": "shell",
-      "command": "cd ${workspaceFolder}/docker && docker-compose up -d",
+      "command": "cd ${workspaceFolder}/docker && docker compose up -d",
       "presentation": {
         "echo": true,
         "reveal": "always",
@@ -269,7 +295,7 @@
     {
       "label": "docker: down",
       "type": "shell",
-      "command": "cd ${workspaceFolder}/docker && docker-compose down",
+      "command": "cd ${workspaceFolder}/docker && docker compose down",
       "presentation": {
         "echo": true,
         "reveal": "always",

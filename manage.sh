@@ -22,6 +22,9 @@ PROJECT_DIR="${SCRIPT_DIR}"
 DIST_DIR="${PROJECT_DIR}/package-helper/target/dist/cli-1.0.0"
 DOCKER_DIR="${PROJECT_DIR}/docker"
 DOCKER_COMPOSE_FILE="${DOCKER_DIR}/docker-compose.yml"
+DEVCONTAINER_DB_DIR="${PROJECT_DIR}/.devcontainer/dockeroracle-db"
+ORACLE_INIT_SOURCE="${DEVCONTAINER_DB_DIR}/init"
+ORACLE_INIT_TARGET="${DOCKER_DIR}/init"
 
 # Java runtime command (set dynamically by find_java)
 JAVA_CMD=""
@@ -600,6 +603,16 @@ refresh_oracle() {
 	echo "========================================"
 
 	verify_docker_compose
+
+	if [[ -d ${ORACLE_INIT_SOURCE} ]]; then
+		echo "Syncing Oracle init scripts from ${ORACLE_INIT_SOURCE}..."
+		rm -rf "${ORACLE_INIT_TARGET}"
+		mkdir -p "${ORACLE_INIT_TARGET}"
+		cp -R "${ORACLE_INIT_SOURCE}"/* "${ORACLE_INIT_TARGET}"/ 2>/dev/null || true
+	else
+		echo "✗ ERROR: Oracle init scripts not found at ${ORACLE_INIT_SOURCE}"
+		exit 1
+	fi
 
 	cd "${DOCKER_DIR}" || exit 1
 
