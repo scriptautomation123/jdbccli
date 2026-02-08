@@ -5,11 +5,26 @@ import java.util.Objects;
 import com.company.app.service.util.ExceptionUtils;
 import com.company.app.service.util.YamlConfig;
 
-public class ConnectionStringGenerator {
+public final class ConnectionStringGenerator {
+
+  private static final String DEFAULT_CONFIG_PATH = "application.yaml";
+
+  /** Private constructor to prevent instantiation of utility class. */
+  private ConnectionStringGenerator() {
+    throw new UnsupportedOperationException("Utility class");
+  }
 
   /** Lazy, thread-safe config holder using initialization-on-demand idiom. */
   private static final class ConfigHolder {
-    static final YamlConfig INSTANCE = new YamlConfig("application.yaml");
+    static final YamlConfig INSTANCE = new YamlConfig(resolveConfigPath());
+  }
+
+  private static String resolveConfigPath() {
+    String override = System.getProperty("vault.config");
+    if (override == null || override.isBlank()) {
+      return DEFAULT_CONFIG_PATH;
+    }
+    return override;
   }
 
   private static YamlConfig getConfig() {

@@ -110,84 +110,135 @@ public final class ScriptParser {
 
     final List<String> statements = new ArrayList<>();
     final StringBuilder current = new StringBuilder();
-    final String[] lines = content.split("\\R"); // Split on any line ending
+    final String[] lines = content.split("\\R");
 
-    boolean inPlsqlBlock = false;
-    boolean inString = false;
-    boolean inBlockComment = false;
+    final ParserState state = new ParserState();
 
     for (final String line : lines) {
       final String trimmedLine = line.trim();
 
-      // Handle block comments
-      if (!inString) {
-        if (trimmedLine.contains("/*") && !trimmedLine.contains("*/")) {
-          inBlockComment = true;
+      updateBlockCommentState(trimmedLine, state);
+
+      if (!shouldSkipLine(current, trimmedLine)) {
+        updatePlsqlBlockState(trimmedLine, state);
+
+        if (!processPlsqlTerminator(line, current, statements, state)) {
+          appendLineToStatement(line, current);
+          state.inString = updateStringState(line, state.inString);
+          processSemicolonTerminator(trimmedLine, current, statements, state);
         }
-        if (inBlockComment && trimmedLine.contains("*/")) {
-          inBlockComment = false;
-        }
-      }
-
-      // Skip pure comment lines at statement boundaries
-      if (current.isEmpty() && isCommentLine(trimmedLine)) {
-        continue;
-      }
-
-      // Check for PL/SQL block start
-      if (!inPlsqlBlock && !inBlockComment && isPLSQLBlockStart(trimmedLine)) {
-        inPlsqlBlock = true;
-      }
-
-      // Check for slash delimiter (PL/SQL block terminator)
-      if (inPlsqlBlock && SLASH_DELIMITER.matcher(line).matches()) {
-        final String statement = current.toString().trim();
-        if (!statement.isEmpty() && isExecutableStatement(statement)) {
-          statements.add(statement);
-        }
-        current.setLength(0);
-        inPlsqlBlock = false;
-        continue;
-      }
-
-      // Append line to current statement
-      if (!current.isEmpty()) {
-        current.append("\n");
-      }
-      current.append(line);
-
-      // Track string literals to avoid false positives
-      inString = updateStringState(line, inString);
-
-      // For non-PL/SQL, check for semicolon at end of line (outside strings)
-      if (!inPlsqlBlock && !inBlockComment && !inString && trimmedLine.endsWith(";")) {
-        final String statement = current.toString().trim();
-        // Remove trailing semicolon for consistent execution
-        final String cleaned =
-            statement.endsWith(";")
-                ? statement.substring(0, statement.length() - 1).trim()
-                : statement;
-        if (!cleaned.isEmpty() && isExecutableStatement(cleaned)) {
-          statements.add(cleaned);
-        }
-        current.setLength(0);
       }
     }
 
-    // Handle any remaining content (statement without terminator)
-    final String remaining = current.toString().trim();
-    if (!remaining.isEmpty() && isExecutableStatement(remaining)) {
-      // Remove trailing semicolon if present
-      final String cleaned =
-          remaining.endsWith(";")
-              ? remaining.substring(0, remaining.length() - 1).trim()
-              : remaining;
-      if (!cleaned.isEmpty()) {
-        statements.add(cleaned);
-      }
-    }
+    addRemainingStatement(current, statements);
 
     return statements;
+  }
+
+  /** Mutable state for parser loop. */
+  private static final class ParserState {
+    boolean inPlsqlBlock = false;
+    boolean inString = false;
+    boolean inBlockComment = false;
+  }
+
+  /** Updates block comment state based on current line. */
+  private static void updateBlockCommentState(final String trimmedLine, final ParserState state) {
+    if (state.inString) {
+      return;
+    }
+    if (trimmedLine.contains("/*") && !trimmedLine.contains("*/")) {
+      state.inBlockComment = true;
+    }
+    if (state.inBlockComment && trimmedLine.contains("*/")) {
+      state.inBlockComment = false;
+    }
+  }
+
+  /** Determines if current line should be skipped. */
+  private static boolean shouldSkipLine(final StringBuilder current, final String trimmedLine) {
+    return current.isEmpty() && isCommentLine(trimmedLine);
+  }
+
+  /** Updates PL/SQL block state if block start detected. */
+  private static void updatePlsqlBlockState(final String trimmedLine, final ParserState state) {
+    if (!state.inPlsqlBlock && !state.inBlockComment && isPLSQLBlockStart(trimmedLine)) {
+      state.inPlsqlBlock = true;
+    }
+  }
+
+  /**
+   * Processes PL/SQL slash terminator if present.
+   *
+   * @return true if line was processed as terminator
+   */
+  private static boolean processPlsqlTerminator(
+      final String line,
+      final StringBuilder current,
+      final List<String> statements,
+      final ParserState state) {
+
+    if (!state.inPlsqlBlock || !SLASH_DELIMITER.matcher(line).matches()) {
+      return false;
+    }
+
+    addStatementIfValid(current.toString().trim(), statements);
+    current.setLength(0);
+    state.inPlsqlBlock = false;
+    return true;
+  }
+
+  /** Appends line to current statement buffer. */
+  private static void appendLineToStatement(final String line, final StringBuilder current) {
+    if (!current.isEmpty()) {
+      current.append("\n");
+    }
+    current.append(line);
+  }
+
+  /** Processes semicolon terminator for non-PL/SQL statements. */
+  private static void processSemicolonTerminator(
+      final String trimmedLine,
+      final StringBuilder current,
+      final List<String> statements,
+      final ParserState state) {
+
+    if (state.inPlsqlBlock || state.inBlockComment || state.inString) {
+      return;
+    }
+    if (!trimmedLine.endsWith(";")) {
+      return;
+    }
+
+    final String statement = current.toString().trim();
+    final String cleaned = removeTrailingSemicolon(statement);
+    addStatementIfValid(cleaned, statements);
+    current.setLength(0);
+  }
+
+  /** Adds remaining statement if any exists. */
+  private static void addRemainingStatement(
+      final StringBuilder current, final List<String> statements) {
+    final String remaining = current.toString().trim();
+    if (remaining.isEmpty()) {
+      return;
+    }
+    final String cleaned = removeTrailingSemicolon(remaining);
+    addStatementIfValid(cleaned, statements);
+  }
+
+  /** Removes trailing semicolon from statement. */
+  private static String removeTrailingSemicolon(final String statement) {
+    return statement.endsWith(";")
+        ? statement.substring(0, statement.length() - 1).trim()
+        : statement;
+  }
+
+  /** Adds statement to list if it's valid and executable. */
+  private static void addStatementIfValid(final String statement, final List<String> statements) {
+    if (!statement.isEmpty() && isExecutableStatement(statement)) {
+      statements.add(statement);
+    }
   }
 
   /** Checks if a line starts a PL/SQL block. */

@@ -36,9 +36,6 @@
                     <source>${maven.compiler.source}</source>
                     <target>${maven.compiler.target}</target>
                     <release>${maven.compiler.release}</release>
-                    <compilerArgs>
-                        <arg>-proc:none</arg>
-                    </compilerArgs>
                 </configuration>
             </plugin>
 

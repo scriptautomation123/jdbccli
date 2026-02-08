@@ -18,6 +18,10 @@ import java.sql.Statement;
  *   <li>Proper exception handling in TypeHandlerPropertyAccessor
  *   <li>UnderscoreToCamelCase conversion
  * </ul>
+ *
+ * <p><strong>Note:</strong> This class uses a main() method for demonstration purposes. In a
+ * production environment, use a proper testing framework like JUnit. The manual test approach is
+ * intentional for this demo/benchmark project.
  */
 public final class ResultSetHandlerTest {
 
@@ -83,18 +87,36 @@ public final class ResultSetHandlerTest {
     int failed = 0;
 
     // Run all tests
-    if (testTypeHandlerRegistryNullValidation()) passed++;
-    else failed++;
-    if (testUnderscoreToCamelCaseConversion()) passed++;
-    else failed++;
-    if (testObjectResultHandlerMapping()) passed++;
-    else failed++;
-    if (testFactoryCacheHit()) passed++;
-    else failed++;
-    if (testBoundedCacheEviction()) passed++;
-    else failed++;
-    if (testNullHandling()) passed++;
-    else failed++;
+    if (testTypeHandlerRegistryNullValidation()) {
+      passed++;
+    } else {
+      failed++;
+    }
+    if (testUnderscoreToCamelCaseConversion()) {
+      passed++;
+    } else {
+      failed++;
+    }
+    if (testObjectResultHandlerMapping()) {
+      passed++;
+    } else {
+      failed++;
+    }
+    if (testFactoryCacheHit()) {
+      passed++;
+    } else {
+      failed++;
+    }
+    if (testBoundedCacheEviction()) {
+      passed++;
+    } else {
+      failed++;
+    }
+    if (testNullHandling()) {
+      passed++;
+    } else {
+      failed++;
+    }
 
     // Print summary
     System.out.println();
@@ -119,7 +141,7 @@ public final class ResultSetHandlerTest {
 
       // Attempt to register with null key
       try {
-        registry.register(null, (rs, i) -> rs.getString(i));
+        registry.register(null, ResultSet::getString);
         System.out.println("  ✗ FAILED: Should have thrown NullPointerException");
         return false;
       } catch (NullPointerException e) {
@@ -198,7 +220,10 @@ public final class ResultSetHandlerTest {
         ResultSetHandler<TestUser> handler =
             DefaultResultSetHandlerFactory.getHandler(TestUser.class, rs.getMetaData());
 
-        rs.next();
+        if (!rs.next()) {
+          System.out.println("  ✗ FAILED: No data in result set");
+          return false;
+        }
         TestUser user = handler.handle(rs);
 
         // Verify mappings
@@ -251,19 +276,17 @@ public final class ResultSetHandlerTest {
       int initialSize = DefaultResultSetHandlerFactory.getCacheSize();
 
       // First query creates handler
-      ResultSetHandler<TestUser> handler1;
       try (PreparedStatement pstmt = conn.prepareStatement("SELECT * FROM cache_test");
           ResultSet rs = pstmt.executeQuery()) {
-        handler1 = DefaultResultSetHandlerFactory.getHandler(TestUser.class, rs.getMetaData());
+        DefaultResultSetHandlerFactory.getHandler(TestUser.class, rs.getMetaData());
       }
 
       int sizeAfterFirst = DefaultResultSetHandlerFactory.getCacheSize();
 
       // Second query should hit cache
-      ResultSetHandler<TestUser> handler2;
       try (PreparedStatement pstmt = conn.prepareStatement("SELECT * FROM cache_test");
           ResultSet rs = pstmt.executeQuery()) {
-        handler2 = DefaultResultSetHandlerFactory.getHandler(TestUser.class, rs.getMetaData());
+        DefaultResultSetHandlerFactory.getHandler(TestUser.class, rs.getMetaData());
       }
 
       int sizeAfterSecond = DefaultResultSetHandlerFactory.getCacheSize();
@@ -294,7 +317,8 @@ public final class ResultSetHandlerTest {
   private static boolean testBoundedCacheEviction() {
     System.out.println("Test: Bounded cache eviction (LRU)");
 
-    // This is a logical test - we won't fill the entire cache but verify the mechanism exists
+    // This is a logical test - we won't fill the entire cache but verify the
+    // mechanism exists
     try {
       DefaultResultSetHandlerFactory.clearCache();
 
@@ -338,7 +362,10 @@ public final class ResultSetHandlerTest {
         ResultSetHandler<TestUser> handler =
             DefaultResultSetHandlerFactory.getHandler(TestUser.class, rs.getMetaData());
 
-        rs.next();
+        if (!rs.next()) {
+          System.out.println("  ✗ FAILED: No data in result set");
+          return false;
+        }
         TestUser user = handler.handle(rs);
 
         if (user.getId() == 1 && user.getUserName() == null) {

@@ -6,6 +6,10 @@ set -e
 # Enable inherit_errexit for command substitutions
 shopt -s inherit_errexit
 
+# ========================================
+# Global Variables
+# ========================================
+
 # Database connection settings
 DB_PASSWORD="hr_password"
 DB_USER="hr"
@@ -19,8 +23,11 @@ DIST_DIR="${PROJECT_DIR}/package-helper/target/dist/cli-1.0.0"
 DOCKER_DIR="${PROJECT_DIR}/docker"
 DOCKER_COMPOSE_FILE="${DOCKER_DIR}/docker-compose.yml"
 
+# Java runtime command (set dynamically by find_java)
+JAVA_CMD=""
+
 # ========================================
-# Utility Functions
+# Code Quality Functions
 # ========================================
 
 # Function to run spotless formatting and commit
@@ -106,6 +113,10 @@ generate_sbom_report() {
 	echo ""
 	echo "✓ SBOM report completed"
 }
+
+# ========================================
+# Package Migration Functions
+# ========================================
 
 # Function to migrate package paths (copy, not move)
 migrate_package() {
@@ -275,6 +286,10 @@ STEP2
 	echo "└─────────────────────────────────────────────────────────────────┘"
 	echo ""
 }
+
+# ========================================
+# Development Tools Setup Functions
+# ========================================
 
 # Function to check and install development tools
 check_and_install_dev_tools() {
@@ -493,6 +508,10 @@ check_and_install_dev_tools() {
 	echo ""
 }
 
+# ========================================
+# Interactive Menu Functions
+# ========================================
+
 # Function to display interactive menu
 show_menu() {
 	echo ""
@@ -562,6 +581,10 @@ run_interactive() {
 	done
 }
 
+# ========================================
+# Docker Management Functions
+# ========================================
+
 # Function to verify docker-compose.yml exists
 verify_docker_compose() {
 	if [[ ! -f ${DOCKER_COMPOSE_FILE} ]]; then
@@ -599,6 +622,10 @@ refresh_oracle() {
 	sleep 40
 	echo ""
 }
+
+# ========================================
+# Build and Package Functions
+# ========================================
 
 # Function to find and set Java for compilation
 setup_java_for_build() {
@@ -711,6 +738,10 @@ unzip_distribution() {
 	echo ""
 }
 
+# ========================================
+# Test Execution Functions
+# ========================================
+
 # Function to find Java runtime
 find_java() {
 	set -e
@@ -789,10 +820,12 @@ run_all_tests() {
 		return 1
 	}
 
-	# Find Java runtime
-	JAVA_CMD=$(find_java)
-	echo "Using Java: ${JAVA_CMD}"
-	echo ""
+	# Find and set Java runtime globally
+	if [[ -z ${JAVA_CMD} ]]; then
+		JAVA_CMD=$(find_java)
+		echo "Using Java: ${JAVA_CMD}"
+		echo ""
+	fi
 
 	# 1. Execute basic SQL query
 	run_command "Execute SQL - List Employees" \
@@ -840,30 +873,39 @@ run_all_tests() {
 }
 
 # ========================================
-# Main Execution
+# Usage and Main Execution
 # ========================================
 
+# Function to show script usage
 show_usage() {
 	echo "Usage: $0 [OPTION]"
 	echo ""
 	echo "Options:"
-	echo "  --interactive, -i    Interactive menu mode"
+	echo "  --interactive, -i    Interactive menu mode (default)"
 	echo "  --spotless           Run spotless format & commit"
 	echo "  --sbom               Generate SBOM dependency report"
 	echo "  --build              Build project only"
-	echo "  --refresh            Refresh Oracle DB before tests"
+	echo "  --run                Run full pipeline (build + test)"
+	echo "  --refresh            Refresh Oracle DB + run full pipeline"
 	echo "  --migrate-pkg OLD NEW  Migrate package (copy to new path)"
 	echo "  --setup-tools        Check and install dev tools (SDKMAN, Java, Maven, NVM, Node.js)"
 	echo "  --help, -h           Show this help"
 	echo ""
-	echo "Without options: runs full build + test pipeline"
+	echo "Without options: starts interactive menu"
 	echo ""
 	echo "Examples:"
+	echo "  $0                   # Interactive menu"
+	echo "  $0 --run             # Build and run tests"
+	echo "  $0 --refresh         # Reset DB and run tests"
 	echo "  $0 --migrate-pkg com.company.app com.newcompany.newapp"
 }
 
 # Parse command line arguments
 case "${1-}" in
+"")
+	# Default behavior: interactive mode
+	run_interactive
+	;;
 --interactive | -i)
 	run_interactive
 	;;
@@ -888,14 +930,17 @@ case "${1-}" in
 	show_usage
 	exit 0
 	;;
---refresh | "")
-	# Default behavior: full pipeline
+--refresh)
+	# Full pipeline with DB refresh
 	verify_docker_compose
-
-	if [[ ${1-} == "--refresh" ]]; then
-		refresh_oracle
-	fi
-
+	refresh_oracle
+	setup_java_for_build
+	build_project
+	unzip_distribution
+	run_all_tests
+	;;
+--run)
+	# Full pipeline without DB refresh
 	setup_java_for_build
 	build_project
 	unzip_distribution

@@ -10,12 +10,17 @@
     "files.trimTrailingWhitespace": true,
     "files.insertFinalNewline": true,
     "files.exclude": {
-        "**/.classpath": true,
-        "**/.project": true,
-        "**/.settings": true,
+        "**/.classpath": false,
+        "**/.project": false,
+        "**/.settings": false,
         "**/.vscode": false,
-        "**/node_modules": true,
-        "**/.git": true
+        "**/node_modules": false,
+        "**/.devcontainer": false,
+        "**/.sonarlint": false,
+        "**/.trunk": false,
+        "**/.trunkignore": false,
+        "**/.gitignore": false,
+        "**/docker": false
     },
     "search.exclude": {
         "**/node_modules": true,
@@ -31,6 +36,7 @@
             "source.organizeImports"
         ]
     },
+
     "java.debug.settings.hotCodeReplace": "auto",
     "java.debug.settings.vmArgs": "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005",
     "java.debug.logLevel": "warn",
@@ -44,12 +50,46 @@
             "default": true
         }
     ],
-    "java.codeGeneration.useBlocks": true,
-    "java.sources.organizeImports.staticGroupsCount": 1,
+        "java.compile.nullAnalysis.mode": "automatic",
+    "java.sources.organizeImports.staticStarThreshold": 99,
+     "java.sources.organizeImports.starThreshold": 99,
     "redhat.telemetry.enabled": false,
     "maven.executable.preferMavenWrapper": true,
     "maven.terminal.useJavaHome": true,
     "errorLens.enabled": true,
     "errorLens.onSave": true,
-    "problems.decorations.enabled": true
+    "problems.decorations.enabled": true,
+    "java.configuration.updateBuildConfiguration": "automatic",
+      "java.sources.ignoreSourcePattern": [
+    "**/target/**",
+    "**/jmh_generated/**"
+  ],
+  "sonarlint.pathToCompileCommands": "",
+  "sonarlint.pathToNodeExecutable": "",
+  "sonarlint.excludeRules": [],
+  "sonarlint.rules": {
+    "java:S1128": {
+      "level": "off"
+    }
+},
+"workbench.colorCustomizations": {
+    "activityBar.activeBackground": "#339067",
+    "activityBar.background": "#339067",
+    "activityBar.foreground": "#e7e7e7",
+    "activityBar.inactiveForeground": "#e7e7e799",
+    "activityBarBadge.background": "#d2b8e6",
+    "activityBarBadge.foreground": "#15202b",
+    "commandCenter.border": "#e7e7e799",
+    "sash.hoverBorder": "#339067",
+    "statusBar.background": "#266a4c",
+    "statusBar.foreground": "#e7e7e7",
+    "statusBarItem.hoverBackground": "#339067",
+    "statusBarItem.remoteBackground": "#266a4c",
+    "statusBarItem.remoteForeground": "#e7e7e7",
+    "titleBar.activeBackground": "#266a4c",
+    "titleBar.activeForeground": "#e7e7e7",
+    "titleBar.inactiveBackground": "#266a4c99",
+    "titleBar.inactiveForeground": "#e7e7e799"
+},
+"peacock.remoteColor": "#266a4c",
 }

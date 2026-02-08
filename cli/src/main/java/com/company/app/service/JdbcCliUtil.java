@@ -7,32 +7,32 @@ import picocli.CommandLine;
 import picocli.CommandLine.Command;
 
 /**
- * Main CLI application for AIE Utility - Database and Vault operations.
+ * Main CLI application for JDBC CLI Utility - Database and Vault operations.
  *
  * <p><strong>Usage:</strong>
  *
  * <pre>
  * # Execute SQL statement
- * aieutil exec-sql -t oracle -d "jdbc:oracle:thin:@localhost:1521:xe" -u hr "SELECT * FROM employees"
+ * jdbccli exec-sql -t oracle -d "jdbc:oracle:thin:@localhost:1521:xe" -u hr "SELECT * FROM employees"
  *
  * # Execute stored procedure
- * aieutil exec-proc -t oracle -d "jdbc:oracle:thin:@localhost:1521:xe" -u hr my_proc --in "101"
+ * jdbccli exec-proc -t oracle -d "jdbc:oracle:thin:@localhost:1521:xe" -u hr my_proc --in "101"
  *
  * # Test connection
- * aieutil test-conn -t postgresql -d "jdbc:postgresql://localhost/db" -u admin
+ * jdbccli test-conn -t postgresql -d "jdbc:postgresql://localhost/db" -u admin
  *
  * # Show help
- * aieutil --help
- * aieutil exec-sql --help
+ * jdbccli --help
+ * jdbccli exec-sql --help
  * </pre>
  */
 @Command(
-    name = "aieutil",
+    name = "jdbccli",
     mixinStandardHelpOptions = true,
-    description = "AIE Utility - Database and Vault CLI Tool",
+    description = "JDBC CLI Utility - Database and Vault CLI Tool",
     version = "1.0.0",
     subcommands = {ExecSqlCmd.class, ExecProcedureCmd.class, CommandLine.HelpCommand.class})
-public class AieUtilMain implements Runnable {
+public class JdbcCliUtil implements Runnable {
 
   @Override
   public void run() {
@@ -45,7 +45,7 @@ public class AieUtilMain implements Runnable {
       LoggingUtils.logCliStartup(System.getProperty("java.home"));
 
       final CommandLine cmd =
-          new CommandLine(new AieUtilMain()).setCaseInsensitiveEnumValuesAllowed(true);
+          new CommandLine(new JdbcCliUtil()).setCaseInsensitiveEnumValuesAllowed(true);
       cmd.setExecutionExceptionHandler(new ExceptionUtils.ExecutionExceptionHandler());
       cmd.setParameterExceptionHandler(new ExceptionUtils.ParameterExceptionHandler());
 

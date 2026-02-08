@@ -1,7 +1,12 @@
 package com.company.app.service.database;
 
+import java.math.BigDecimal;
 import java.sql.CallableStatement;
 import java.sql.Connection;
+import java.sql.DatabaseMetaData;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Types;
 import java.util.Arrays;
@@ -83,14 +88,57 @@ public class ProcedureExecutor {
      * @return typed parameter value
      */
     public Object getTypedValue() {
+      if (type == null || type.isBlank() || "AUTO".equalsIgnoreCase(type)) {
+        return inferValue(value);
+      }
+
       final String typeUpper = type.toUpperCase(Locale.ROOT);
 
       return switch (typeUpper) {
-        case "NUMBER", "INTEGER", "INT" -> Integer.parseInt(value.toString());
+        case "NUMBER" -> toBigDecimal(value);
+        case "INTEGER", "INT" -> Integer.parseInt(value.toString());
         case "DOUBLE" -> Double.parseDouble(value.toString());
         case "BOOLEAN" -> Boolean.parseBoolean(value.toString());
         default -> value;
       };
+    }
+
+    private static Object inferValue(final Object rawValue) {
+      if (rawValue == null) {
+        return null;
+      }
+      final String text = rawValue.toString().trim();
+      if (text.isEmpty()) {
+        return "";
+      }
+      if ("true".equalsIgnoreCase(text) || "false".equalsIgnoreCase(text)) {
+        return Boolean.parseBoolean(text);
+      }
+      if (text.matches("^-?\\d+$")) {
+        try {
+          return Integer.parseInt(text);
+        } catch (NumberFormatException ignored) {
+          return Long.parseLong(text);
+        }
+      }
+      if (text.matches("^-?\\d+\\.\\d+$")) {
+        return new BigDecimal(text);
+      }
+      return text;
+    }
+
+    private static BigDecimal toBigDecimal(final Object value) {
+      if (value == null) {
+        return null;
+      }
+      if (value instanceof BigDecimal decimal) {
+        return decimal;
+      }
+      final String text = value.toString().trim();
+      if (text.isEmpty()) {
+        return BigDecimal.ZERO;
+      }
+      return new BigDecimal(text);
     }
   }
 
@@ -186,11 +234,27 @@ public class ProcedureExecutor {
     try {
       final List<ProcedureParam> inputs = parseStringInputParams(inputParams);
       final List<ProcedureParam> outputs = parseStringOutputParams(outputParams);
-      final String callSql = buildCallString(procFullName, inputs.size(), outputs.size());
-
-      try (CallableStatement call = conn.prepareCall(callSql)) {
-        return executeCallableStatement(call, inputs, outputs);
+      if (outputs.isEmpty()) {
+        try {
+          return executeFunctionSelect(conn, procFullName, inputs);
+        } catch (SQLException ex) {
+          if (shouldFallbackToProcedure(ex)) {
+            return executeDirectCallForProcedure(conn, procFullName, inputs);
+          }
+          throw ex;
+        }
       }
+
+      return executeCallableForProcedure(conn, procFullName, inputs, outputs);
+    } catch (SQLException e) {
+      LoggingUtils.logStructuredError(
+          "procedure_execution",
+          "execute",
+          FAILED,
+          "Failed to execute procedure with string parameters: " + procFullName,
+          e);
+      throw ExceptionUtils.wrap(
+          e, "Failed to execute procedure with string parameters: " + procFullName);
     } catch (Exception e) {
       LoggingUtils.logStructuredError(
           "procedure_execution",
@@ -200,6 +264,167 @@ public class ProcedureExecutor {
           e);
       throw ExceptionUtils.wrap(
           e, "Failed to execute procedure with string parameters: " + procFullName);
+    }
+  }
+
+  private Map<String, Object> executeCallableForProcedure(
+      final Connection conn,
+      final String procFullName,
+      final List<ProcedureParam> inputs,
+      final List<ProcedureParam> outputs)
+      throws SQLException {
+    final String callSql = buildCallString(procFullName, inputs.size(), outputs.size());
+
+    try (CallableStatement call = conn.prepareCall(callSql)) {
+      return executeCallableStatement(call, inputs, outputs);
+    }
+  }
+
+  private Map<String, Object> executeDirectCallForProcedure(
+      final Connection conn, final String procFullName, final List<ProcedureParam> inputs)
+      throws SQLException {
+    validateProcedureName(procFullName);
+
+    final StringBuilder sql = new StringBuilder("CALL ").append(procFullName);
+    if (inputs.isEmpty()) {
+      sql.append("()");
+    } else {
+      final StringJoiner placeholders = new StringJoiner(",", "(", ")");
+      for (int i = 0; i < inputs.size(); i++) {
+        placeholders.add("?");
+      }
+      sql.append(placeholders);
+    }
+
+    try (PreparedStatement statement = conn.prepareStatement(sql.toString())) {
+      for (int i = 0; i < inputs.size(); i++) {
+        setParameter(statement, i + 1, inputs.get(i).getTypedValue());
+      }
+      statement.execute();
+    }
+
+    return Collections.emptyMap();
+  }
+
+  private Map<String, Object> executeFunctionSelect(
+      final Connection conn, final String procFullName, final List<ProcedureParam> inputs)
+      throws SQLException {
+    validateProcedureName(procFullName);
+
+    final StringBuilder sql = new StringBuilder("SELECT ").append(procFullName);
+    if (inputs.isEmpty()) {
+      sql.append("()");
+    } else {
+      final StringJoiner placeholders = new StringJoiner(",", "(", ")");
+      for (int i = 0; i < inputs.size(); i++) {
+        placeholders.add("?");
+      }
+      sql.append(placeholders);
+    }
+
+    try (PreparedStatement statement = conn.prepareStatement(sql.toString())) {
+      for (int i = 0; i < inputs.size(); i++) {
+        setParameter(statement, i + 1, inputs.get(i).getTypedValue());
+      }
+
+      try (ResultSet resultSet = statement.executeQuery()) {
+        if (!resultSet.next()) {
+          return Collections.emptyMap();
+        }
+        final ResultSetMetaData metaData = resultSet.getMetaData();
+        final int columnCount = metaData.getColumnCount();
+        final Map<String, Object> result = new LinkedHashMap<>();
+        for (int i = 1; i <= columnCount; i++) {
+          String name = metaData.getColumnLabel(i);
+          if (name == null || name.isBlank()) {
+            name = "result" + i;
+          }
+          result.put(name, resultSet.getObject(i));
+        }
+        return result;
+      }
+    }
+  }
+
+  private boolean shouldFallbackToProcedure(final SQLException ex) {
+    final String sqlState = ex.getSQLState();
+    if ("42809".equals(sqlState)) {
+      return true;
+    }
+
+    final String message = ex.getMessage();
+    if (message != null) {
+      final String lower = message.toLowerCase(Locale.ROOT);
+      if (lower.contains("is a procedure") || lower.contains("use call")) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private boolean isFunction(final Connection conn, final String procFullName) throws SQLException {
+    return hasMetadataMatch(conn, procFullName, true);
+  }
+
+  private boolean isProcedure(final Connection conn, final String procFullName)
+      throws SQLException {
+    return hasMetadataMatch(conn, procFullName, false);
+  }
+
+  private boolean hasMetadataMatch(
+      final Connection conn, final String procFullName, final boolean functionSearch)
+      throws SQLException {
+    final int lastDot = procFullName.lastIndexOf('.');
+    final String schema = lastDot > 0 ? procFullName.substring(0, lastDot) : null;
+    final String name = lastDot > 0 ? procFullName.substring(lastDot + 1) : procFullName;
+
+    final DatabaseMetaData metaData = conn.getMetaData();
+    final String catalog = conn.getCatalog();
+    final String connSchema = safeSchema(conn);
+
+    if (hasObject(metaData, catalog, schema, name, functionSearch)
+        || hasObject(metaData, catalog, connSchema, name, functionSearch)
+        || hasObject(metaData, catalog, null, name, functionSearch)) {
+      return true;
+    }
+
+    final String upper = name.toUpperCase(Locale.ROOT);
+    if (!upper.equals(name)
+        && (hasObject(metaData, catalog, schema, upper, functionSearch)
+            || hasObject(metaData, catalog, connSchema, upper, functionSearch)
+            || hasObject(metaData, catalog, null, upper, functionSearch))) {
+      return true;
+    }
+
+    final String lower = name.toLowerCase(Locale.ROOT);
+    return !lower.equals(name)
+        && (hasObject(metaData, catalog, schema, lower, functionSearch)
+            || hasObject(metaData, catalog, connSchema, lower, functionSearch)
+            || hasObject(metaData, catalog, null, lower, functionSearch));
+  }
+
+  private boolean hasObject(
+      final DatabaseMetaData metaData,
+      final String catalog,
+      final String schema,
+      final String name,
+      final boolean functionSearch)
+      throws SQLException {
+    if (functionSearch) {
+      try (ResultSet rs = metaData.getFunctions(catalog, schema, name)) {
+        return rs.next();
+      }
+    }
+    try (ResultSet rs = metaData.getProcedures(catalog, schema, name)) {
+      return rs.next();
+    }
+  }
+
+  private String safeSchema(final Connection conn) {
+    try {
+      return conn.getSchema();
+    } catch (SQLException ignored) {
+      return null;
     }
   }
 
@@ -246,11 +471,22 @@ public class ProcedureExecutor {
       if (StringUtils.isNullOrBlank(inputParams)) {
         return Collections.emptyList();
       }
-      return Arrays.stream(inputParams.split(","))
-          .map(String::trim)
-          .filter(s -> s.contains(":"))
-          .map(ProcedureParam::fromString)
-          .toList();
+      final String[] parts = inputParams.split(",");
+      final List<ProcedureParam> params = new java.util.ArrayList<>(parts.length);
+      int index = 1;
+      for (final String part : parts) {
+        final String trimmed = part.trim();
+        if (trimmed.isEmpty()) {
+          continue;
+        }
+        if (trimmed.contains(":")) {
+          params.add(ProcedureParam.fromString(trimmed));
+        } else {
+          params.add(new ProcedureParam("p" + index, "AUTO", trimmed));
+        }
+        index++;
+      }
+      return params;
     } catch (Exception e) {
       LoggingUtils.logStructuredError(
           PARAMETER_PARSING, "parse_input", FAILED, "Failed to parse string input parameters", e);
@@ -296,6 +532,18 @@ public class ProcedureExecutor {
    * @throws SQLException if setting parameter fails
    */
   private void setParameter(final CallableStatement stmt, final int index, final Object value)
+      throws SQLException {
+    switch (value) {
+      case null -> stmt.setNull(index, Types.NULL);
+      case Integer i -> stmt.setInt(index, i);
+      case Double d -> stmt.setDouble(index, d);
+      case String s -> stmt.setString(index, s);
+      case Boolean b -> stmt.setBoolean(index, b);
+      default -> stmt.setObject(index, value);
+    }
+  }
+
+  private void setParameter(final PreparedStatement stmt, final int index, final Object value)
       throws SQLException {
     switch (value) {
       case null -> stmt.setNull(index, Types.NULL);

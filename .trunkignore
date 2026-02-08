@@ -1,3 +1,4 @@
 # Trunk ignore file
 # Auto-generated files
 dependency-reduced-pom.xml
+**/target/

@@ -64,14 +64,16 @@ final class TypeHandlerPropertyAccessor implements JdbcPropertyAccessor {
       value = handler.getResult(rs, columnIndex);
     } catch (SQLException e) {
       // Log the conversion error with full context
-      LOG.error(
-          "Type conversion error for property '{}' at column {}: {}. "
-              + "Expected type: {}, Handler: {}. NOT falling back to getObject() - fix the data!",
-          propertyName,
-          columnIndex,
-          e.getMessage(),
-          propertyType.getName(),
-          handler.getClass().getSimpleName());
+      if (LOG.isErrorEnabled()) {
+        LOG.error(
+            "Type conversion error for property '{}' at column {}: {}. "
+                + "Expected type: {}, Handler: {}. NOT falling back to getObject() - fix the data!",
+            propertyName,
+            columnIndex,
+            e.getMessage(),
+            propertyType.getName(),
+            handler.getClass().getSimpleName());
+      }
       // Propagate the error - don't silently swallow it!
       throw new SQLException(
           String.format(
@@ -83,12 +85,14 @@ final class TypeHandlerPropertyAccessor implements JdbcPropertyAccessor {
     try {
       setter.invoke(target, value);
     } catch (IllegalArgumentException e) {
-      LOG.error(
-          "Cannot set property '{}' with value '{}' (type {}): {}",
-          propertyName,
-          value,
-          value != null ? value.getClass().getName() : "null",
-          e.getMessage());
+      if (LOG.isErrorEnabled()) {
+        LOG.error(
+            "Cannot set property '{}' with value '{}' (type {}): {}",
+            propertyName,
+            value,
+            value != null ? value.getClass().getName() : "null",
+            e.getMessage());
+      }
       throw e;
     }
   }

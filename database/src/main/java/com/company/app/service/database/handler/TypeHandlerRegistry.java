@@ -18,6 +18,16 @@ import java.util.concurrent.ConcurrentHashMap;
  * TypeHandlers for common types, avoiding repeated handler creation. The registry is initialized
  * with handlers for all common JDBC types.
  *
+ * <p><strong>Singleton Justification:</strong> The singleton pattern is appropriate here because:
+ *
+ * <ul>
+ *   <li>Type handlers are stateless and immutable
+ *   <li>Shared registry reduces memory footprint across all JDBC operations
+ *   <li>Thread-safe ConcurrentHashMap allows concurrent access
+ *   <li>Pre-initialized handlers avoid setup cost on first use
+ *   <li>No alternative injection mechanism needed for this utility
+ * </ul>
+ *
  * <p><strong>Issue Fixed:</strong> Null key registration is now validated and rejected with a clear
  * error message.
  *
@@ -109,7 +119,7 @@ public final class TypeHandlerRegistry {
     register(byte.class, ResultSet::getByte);
 
     // Date/Time types
-    register(Date.class, (rs, i) -> rs.getTimestamp(i));
+    register(Date.class, ResultSet::getTimestamp);
     register(Timestamp.class, ResultSet::getTimestamp);
     register(java.sql.Date.class, ResultSet::getDate);
     register(java.sql.Time.class, ResultSet::getTime);

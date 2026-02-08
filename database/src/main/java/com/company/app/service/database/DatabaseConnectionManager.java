@@ -87,11 +87,8 @@ public final class DatabaseConnectionManager {
       throw e;
     }
 
-    // Generate connection string
-    final String connectionUrl =
-        ConnectionStringGenerator.createConnectionString(
-                config.type(), config.database(), config.user(), config.password(), config.host())
-            .url();
+    // Generate connection string or use explicit JDBC URL when provided.
+    final String connectionUrl = resolveConnectionUrl(config);
 
     LoggingUtils.logDatabaseConnection(config.type(), config.database(), config.user());
 
@@ -128,5 +125,14 @@ public final class DatabaseConnectionManager {
       final String type, final String database, final String user, final String password)
       throws SQLException {
     return createConnection(new ConnectionConfig(type, database, user, password));
+  }
+
+  private static String resolveConnectionUrl(final ConnectionConfig config) {
+    if (config.database().startsWith("jdbc:")) {
+      return config.database();
+    }
+    return ConnectionStringGenerator.createConnectionString(
+            config.type(), config.database(), config.user(), config.password(), config.host())
+        .url();
   }
 }

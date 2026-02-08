@@ -44,7 +44,7 @@ logs/
 # Ignore all .pmd files
 **/*.pmd
 
-
+**/target/
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

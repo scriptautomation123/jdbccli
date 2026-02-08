@@ -5,6 +5,7 @@
             <PatternLayout pattern="%msg%n" />
             <Filters>
                 <ThresholdFilter level="error" onMatch="ACCEPT" onMismatch="DENY" />
+                <RegexFilter regex=".*errorType=SUCCESS.*" onMatch="DENY" onMismatch="NEUTRAL" />
             </Filters>
         </Console>
         <File name="File" fileName="logs/app.log">

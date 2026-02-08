@@ -102,14 +102,20 @@ public final class DatabaseExecutionContext {
    */
   private Optional<String> resolvePassword(final DbRequest request) {
     try {
+      String vaultUrl = request.vaultConfig().vaultUrl();
+      String roleId = request.vaultConfig().roleId();
+      String secretId = request.vaultConfig().secretId();
+      String ait = request.vaultConfig().ait();
+
+      if (!hasAllVaultParams(vaultUrl, roleId, secretId, ait)) {
+        vaultUrl = null;
+        roleId = null;
+        secretId = null;
+        ait = null;
+      }
+
       final PasswordRequest passwordRequest =
-          new PasswordRequest(
-              request.user(),
-              request.database(),
-              request.vaultConfig().vaultUrl(),
-              request.vaultConfig().roleId(),
-              request.vaultConfig().secretId(),
-              request.vaultConfig().ait());
+          new PasswordRequest(request.user(), request.database(), vaultUrl, roleId, secretId, ait);
 
       return passwordResolver.resolvePassword(passwordRequest);
 
@@ -122,6 +128,15 @@ public final class DatabaseExecutionContext {
           e);
       throw e;
     }
+  }
+
+  private boolean hasAllVaultParams(
+      final String vaultUrl, final String roleId, final String secretId, final String ait) {
+    return isNotBlank(vaultUrl) && isNotBlank(roleId) && isNotBlank(secretId) && isNotBlank(ait);
+  }
+
+  private boolean isNotBlank(final String value) {
+    return value != null && !value.isBlank();
   }
 
   /**

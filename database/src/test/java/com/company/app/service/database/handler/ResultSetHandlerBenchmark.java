@@ -120,7 +120,7 @@ public final class ResultSetHandlerBenchmark {
 
     public static Comparison of(BenchmarkResult baseline, BenchmarkResult optimized) {
       double speedup = baseline.meanMs / Math.max(optimized.meanMs, 0.001);
-      double improvement = ((baseline.meanMs - optimized.meanMs) / baseline.meanMs) * 100;
+      double improvement = (baseline.meanMs - optimized.meanMs) / baseline.meanMs * 100.0;
       return new Comparison(baseline, optimized, speedup, improvement);
     }
 
@@ -233,7 +233,6 @@ public final class ResultSetHandlerBenchmark {
     BenchmarkResult noCache =
         runBenchmark(
             "No Cache (new handler)",
-            conn,
             () -> {
               try (PreparedStatement pstmt = conn.prepareStatement("SELECT * FROM users");
                   ResultSet rs = pstmt.executeQuery()) {
@@ -249,7 +248,6 @@ public final class ResultSetHandlerBenchmark {
     BenchmarkResult cached =
         runBenchmark(
             "Factory Cache",
-            conn,
             () -> {
               try (PreparedStatement pstmt = conn.prepareStatement("SELECT * FROM users");
                   ResultSet rs = pstmt.executeQuery()) {
@@ -337,8 +335,9 @@ public final class ResultSetHandlerBenchmark {
       String sql = "SELECT id, first_name FROM users WHERE id = " + i;
       try (PreparedStatement pstmt = conn.prepareStatement(sql);
           ResultSet rs = pstmt.executeQuery()) {
-        rs.next(); // Move to first row
-        DefaultResultSetHandlerFactory.getHandler(User.class, rs.getMetaData());
+        if (rs.next()) {
+          DefaultResultSetHandlerFactory.getHandler(User.class, rs.getMetaData());
+        }
       }
     }
 
@@ -351,8 +350,7 @@ public final class ResultSetHandlerBenchmark {
   }
 
   /** Runs a benchmark with warm-up and returns statistics. */
-  private static BenchmarkResult runBenchmark(String name, Connection conn, QueryRunner runner)
-      throws SQLException {
+  private static BenchmarkResult runBenchmark(String name, QueryRunner runner) throws SQLException {
 
     // Warm-up
     for (int i = 0; i < WARMUP; i++) {

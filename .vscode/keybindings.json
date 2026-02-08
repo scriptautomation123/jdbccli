@@ -35,6 +35,14 @@
     "args": "manage: interactive"
   },
   {
+    "key": "ctrl+alt+t",
+    "command": "workbench.action.tasks.runTask"
+  },
+  {
+    "key": "ctrl+shift+alt+t",
+    "command": "workbench.action.tasks.runTask"
+  },
+  {
     "key": "ctrl+alt+d",
     "command": "workbench.action.tasks.runTask",
     "args": "docker: up"

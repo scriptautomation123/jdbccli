@@ -1,8 +1,8 @@
-# Google Java Format Setup Guide
+# Google Java Format Guide
 
 ## Overview
 
-Your codebase has been configured with **Google Java Format** using the **Spotless Maven Plugin**. This ensures consistent code style across the project for Java 21 code.
+This project uses Google Java Format via the Spotless Maven Plugin to keep Java 21 code consistent across modules.
 
 ---
 
@@ -37,24 +37,9 @@ Your codebase has been configured with **Google Java Format** using the **Spotle
 
 ## What Gets Formatted
 
-### Code Style
-- **Indentation:** 2 spaces (Google standard)
-- **Line length:** 100 characters (default)
-- **Bracket placement:** Consistent (no 1TBS)
-- **Method parameters:** Wrapped with proper indentation
-- **Lambda expressions:** Formatted with body on same line when possible
-
-### Import Organization
-- Standard library: `java.*` imports first
-- Then: `javax.*` imports
-- Then: `org.*` and `com.*` packages
-- Wildcard imports at the end
-- Unused imports are automatically removed
-
-### Whitespace
-- Trailing whitespace removed
-- Files end with newline character
-- Consistent spacing around operators and keywords
+- Indentation and line wrapping (Google style)
+- Import order: `java`, `javax`, `org`, `com` (wildcards last)
+- Trailing whitespace removal and end-of-file newline
 
 ---
 
@@ -84,46 +69,10 @@ mvn -pl cli spotless:apply
 
 ---
 
-## Integration with Development Workflow
+## Workflow Integration
 
-### Before Committing
-```bash
-# Format all files
-mvn spotless:apply
-
-# Verify formatting
-mvn spotless:check
-
-# Then commit
-git add -A
-git commit -m "Your commit message"
-```
-
-### Pre-commit Hook (Optional)
-Create `.git/hooks/pre-commit`:
-```bash
-#!/bin/bash
-mvn spotless:check
-if [ $? -ne 0 ]; then
-    echo "Code formatting issues detected. Run 'mvn spotless:apply' to fix."
-    exit 1
-fi
-```
-
-Make executable:
-```bash
-chmod +x .git/hooks/pre-commit
-```
-
-### CI/CD Pipeline
-Add to your CI/CD configuration:
-```bash
-# In your build stage
-mvn spotless:check
-
-# Or auto-fix:
-mvn spotless:apply
-```
+- Local: run `mvn spotless:apply` before committing
+- CI: run `mvn spotless:check` to enforce formatting
 
 ---
 
@@ -145,7 +94,7 @@ mvn spotless:apply
 
 ### IntelliJ IDEA
 
-1. **Install Plugin:** 
+1. **Install Plugin:**
    - File → Settings → Plugins
    - Search "Google Java Format"
    - Install official plugin
@@ -164,60 +113,6 @@ mvn spotless:apply
 1. Install: EclipseGoogleStyle from Eclipse Marketplace
 
 2. Configure formatter preference
-
----
-
-## Example: Before and After
-
-### Before
-```java
-package com.company.app.service;
-import java.util.*;
-import java.io.*;
-import com.company.app.service.util.*;
-import org.apache.logging.log4j.*;
-
-public class MyClass {
-
-public void method1(String a,String b,String c){
-LOGGER.info("event=test param1="+a);
-}
-
-   public String method2(){
-      if(a!=null){
-         return a;
-      }else{
-         return null;
-      }
-   }
-}
-```
-
-### After (Google Java Format)
-```java
-package com.company.app.service;
-
-import java.io.IOException;
-import java.util.List;
-
-import com.company.app.service.util.ExceptionUtils;
-import org.apache.logging.log4j.Logger;
-
-public class MyClass {
-
-  public void method1(String a, String b, String c) {
-    LOGGER.info("event=test param1={}", a);
-  }
-
-  public String method2() {
-    if (a != null) {
-      return a;
-    } else {
-      return null;
-    }
-  }
-}
-```
 
 ---
 
@@ -256,15 +151,12 @@ mvn spotless:apply
 
 ## Styles Available
 
-### GOOGLE (Default - Recommended)
+### GOOGLE (Default)
 - 2-space indentation
 - 100-character line limit
-- Standard Google style guide
 
-### AOSP (Android Open Source Project)
+### AOSP
 - 4-space indentation
-- Used by Android projects
-- More relaxed line breaking
 
 Change in pom.xml:
 ```xml
@@ -305,59 +197,11 @@ mvn spotless:apply -DspotlessFollow=true
 ```
 
 This ensures imports are organized as:
-1. `java.*` 
+1. `java.*`
 2. `javax.*`
 3. `org.*`
 4. `com.*`
 5. Wildcard imports
-
----
-
-## Files Currently Formatted
-
-- ✅ All 24 Java source files
-- ✅ 3,717 lines of code
-- ✅ 6 Maven modules:
-  - domain/
-  - util/
-  - vault-client/
-  - database/
-  - cli/
-  - package-helper/
-
----
-
-## Verification
-
-All files have been verified:
-```bash
-mvn spotless:check
-```
-
-**Result:** ✅ PASSED - All files meet Google Java Format standards
-
----
-
-## Best Practices
-
-1. **Always apply formatting before pushing:**
-   ```bash
-   mvn spotless:apply
-   ```
-
-2. **Run spotless:check in CI/CD** to catch style violations
-
-3. **Install IDE extension** for real-time feedback
-
-4. **Team consistency:**
-   - Commit pom.xml with Spotless config
-   - Document in README or CONTRIBUTING.md
-   - Run spotless:apply as part of build process
-
-5. **Git configuration** (optional, to ignore formatting changes):
-   ```bash
-   git config diff.ignore-all-space true
-   ```
 
 ---
 
@@ -372,10 +216,5 @@ mvn spotless:check
 ## Version Information
 
 - **Java Version:** 21
-- **Maven:** 3.8.0+
 - **Spotless Plugin:** 2.44.0
 - **Google Java Format:** 1.21.0
-
----
-
-Generated: January 20, 2026

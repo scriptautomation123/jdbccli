@@ -7,6 +7,7 @@ import java.util.function.Supplier;
 import com.company.app.service.JdbcCliLibrary;
 import com.company.app.service.domain.model.VaultConfig;
 
+import picocli.CommandLine.ITypeConverter;
 import picocli.CommandLine.Model.CommandSpec;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Spec;
@@ -26,6 +27,9 @@ import picocli.CommandLine.Spec;
  */
 public abstract class BaseDatabaseCliCommand implements Callable<Integer> {
 
+  private static final String PASSWORD_PROPERTY = "jdbccli.password";
+  private static final String PASSWORD_ENV = "JDBCCLI_PASSWORD";
+
   // =====================================================
   // Database Connection Options
   // =====================================================
@@ -33,7 +37,8 @@ public abstract class BaseDatabaseCliCommand implements Callable<Integer> {
   @Option(
       names = {"-t", "--type"},
       description = "Database type: ${COMPLETION-CANDIDATES}",
-      defaultValue = "ORACLE")
+      defaultValue = "ORACLE",
+      converter = DatabaseTypeConverter.class)
   protected DatabaseType type;
 
   @Option(
@@ -112,8 +117,24 @@ public abstract class BaseDatabaseCliCommand implements Callable<Integer> {
       if (password != null && !password.isBlank()) {
         return password;
       }
+      String override = getNonInteractivePassword();
+      if (override != null) {
+        return override;
+      }
       return promptForPassword();
     };
+  }
+
+  private String getNonInteractivePassword() {
+    String fromProperty = System.getProperty(PASSWORD_PROPERTY);
+    if (fromProperty != null && !fromProperty.isBlank()) {
+      return fromProperty;
+    }
+    String fromEnv = System.getenv(PASSWORD_ENV);
+    if (fromEnv != null && !fromEnv.isBlank()) {
+      return fromEnv;
+    }
+    return null;
   }
 
   // =====================================================
@@ -188,6 +209,16 @@ public abstract class BaseDatabaseCliCommand implements Callable<Integer> {
 
     public String getUrlPrefix() {
       return urlPrefix;
+    }
+  }
+
+  static final class DatabaseTypeConverter implements ITypeConverter<DatabaseType> {
+    @Override
+    public DatabaseType convert(final String value) {
+      if (value == null) {
+        return null;
+      }
+      return DatabaseType.valueOf(value.trim().toUpperCase(java.util.Locale.ROOT));
     }
   }
 }

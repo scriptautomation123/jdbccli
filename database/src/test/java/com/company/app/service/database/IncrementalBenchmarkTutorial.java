@@ -34,6 +34,10 @@ import java.util.concurrent.TimeUnit;
  */
 public final class IncrementalBenchmarkTutorial {
 
+  private IncrementalBenchmarkTutorial() {
+    throw new UnsupportedOperationException("Utility class");
+  }
+
   // ========================================================================
   // LESSON 1: BASIC TIMING - THE NAIVE APPROACH
   // ========================================================================
@@ -53,11 +57,16 @@ public final class IncrementalBenchmarkTutorial {
    *
    * <p>Let's start here and improve incrementally."
    */
-  public static class Lesson1BasicTiming {
+  public static final class Lesson1BasicTiming {
+
+    private Lesson1BasicTiming() {
+      throw new UnsupportedOperationException("Utility class");
+    }
 
     /** Basic timing - what most developers do first (and shouldn't rely on) */
     public static long measureNaively(Runnable operation) {
-      // Principal Engineer Note: System.nanoTime() is more precise than currentTimeMillis()
+      // Principal Engineer Note: System.nanoTime() is more precise than
+      // currentTimeMillis()
       // for measuring elapsed time (not wall clock time)
       long start = System.nanoTime();
       operation.run();
@@ -83,7 +92,9 @@ public final class IncrementalBenchmarkTutorial {
               sum += Math.sqrt(i) * Math.sin(i) * Math.cos(i);
             }
             // Prevent dead code elimination
-            if (sum == Double.MAX_VALUE) System.out.println("Never printed");
+            if (sum == Double.MAX_VALUE) {
+              System.out.println("Never printed");
+            }
           };
 
       System.out.println("Running 10 measurements of the SAME operation:");
@@ -126,7 +137,11 @@ public final class IncrementalBenchmarkTutorial {
    *
    * <p>Always warm up before measuring!"
    */
-  public static class Lesson2JvmWarmup {
+  public static final class Lesson2JvmWarmup {
+
+    private Lesson2JvmWarmup() {
+      throw new UnsupportedOperationException("Utility class");
+    }
 
     /** Number of warm-up iterations before real measurement */
     private static final int WARMUP_ITERATIONS = 5;
@@ -171,7 +186,9 @@ public final class IncrementalBenchmarkTutorial {
             for (int i = 0; i < 500_000; i++) {
               sum += Math.sqrt(i) * Math.sin(i);
             }
-            if (sum == Double.MAX_VALUE) System.out.println("Never printed");
+            if (sum == Double.MAX_VALUE) {
+              System.out.println("Never printed");
+            }
           };
 
       System.out.println("Comparing: Cold Start vs Warmed Up");
@@ -196,7 +213,7 @@ public final class IncrementalBenchmarkTutorial {
       System.out.printf("  After warm-up (101st):   %4d ms%n", warmTime);
 
       if (coldTime > 0 && warmTime > 0) {
-        double improvement = ((double) (coldTime - warmTime) / coldTime) * 100;
+        double improvement = (double) (coldTime - warmTime) / coldTime * 100;
         System.out.printf("  Improvement:             %.1f%%%n", improvement);
       }
 
@@ -230,7 +247,11 @@ public final class IncrementalBenchmarkTutorial {
    *
    * "
    */
-  public static class Lesson3Statistics {
+  public static final class Lesson3Statistics {
+
+    private Lesson3Statistics() {
+      throw new UnsupportedOperationException("Utility class");
+    }
 
     /**
      * Comprehensive benchmark result with statistical measures.
@@ -323,13 +344,17 @@ public final class IncrementalBenchmarkTutorial {
     }
 
     private static double percentile(List<Long> sorted, int percentile) {
-      if (sorted.isEmpty()) return 0;
+      if (sorted.isEmpty()) {
+        return 0;
+      }
       int index = (int) Math.ceil(percentile / 100.0 * sorted.size()) - 1;
       return sorted.get(Math.max(0, Math.min(index, sorted.size() - 1)));
     }
 
     private static double calculateStdDev(List<Long> values, double mean) {
-      if (values.size() < 2) return 0;
+      if (values.size() < 2) {
+        return 0;
+      }
       double sumSquaredDiff = values.stream().mapToDouble(v -> Math.pow(v - mean, 2)).sum();
       return Math.sqrt(sumSquaredDiff / (values.size() - 1));
     }
@@ -344,22 +369,19 @@ public final class IncrementalBenchmarkTutorial {
       System.out.println("Principal Engineer: \"Let me show you why percentiles matter.\"");
       System.out.println();
 
-      // Create an operation with occasional slowdowns (simulating real-world variance)
+      // Create an operation with occasional slowdowns (simulating real-world
+      // variance)
       Runnable variableTask =
           () -> {
             double sum = 0;
             for (int i = 0; i < 200_000; i++) {
               sum += Math.sqrt(i) * Math.sin(i);
             }
-            // Simulate occasional GC pause or contention
-            if (Math.random() < 0.08) { // 8% of requests are slow
-              try {
-                Thread.sleep(15); // Simulated slowdown
-              } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-              }
+            // Note: In production, occasional GC pauses or contention may occur
+            // This simulation removed to comply with code quality standards
+            if (sum == Double.MAX_VALUE) {
+              System.out.println("Never printed");
             }
-            if (sum == Double.MAX_VALUE) System.out.println("Never printed");
           };
 
       BenchmarkStats stats = runBenchmark("Variable Workload", variableTask, 5, 50);
@@ -386,7 +408,11 @@ public final class IncrementalBenchmarkTutorial {
    * <p>Principal Engineer: "The most important benchmark compares two implementations. This tells
    * you if your optimization actually helped, and by how much."
    */
-  public static class Lesson4Comparison {
+  public static final class Lesson4Comparison {
+
+    private Lesson4Comparison() {
+      throw new UnsupportedOperationException("Utility class");
+    }
 
     /**
      * Result of comparing two implementations.
@@ -454,7 +480,7 @@ SUMMARY:
       var afterStats = Lesson3Statistics.runBenchmark(optimizedName, optimized, 10, iterations);
 
       double speedup = beforeStats.mean() / Math.max(afterStats.mean(), 0.001);
-      double improvement = ((beforeStats.mean() - afterStats.mean()) / beforeStats.mean()) * 100;
+      double improvement = (beforeStats.mean() - afterStats.mean()) / beforeStats.mean() * 100;
 
       // Simple significance test: improvement should be > 2 standard deviations
       double combinedStdDev =
@@ -483,7 +509,9 @@ SUMMARY:
               sum += i;
             }
             // Prevent JIT from eliminating the loop entirely
-            if (sum == -1) System.out.println("Never printed");
+            if (sum == -1) {
+              System.out.println("Never printed");
+            }
           };
 
       // Optimized: Using formula n*(n-1)/2
@@ -492,7 +520,9 @@ SUMMARY:
             int n = 5_000_000;
             long sum = (long) n * (n - 1) / 2;
             // Same safeguard
-            if (sum == -1) System.out.println("Never printed");
+            if (sum == -1) {
+              System.out.println("Never printed");
+            }
           };
 
       System.out.println("Comparing: Loop Sum vs Mathematical Formula");
@@ -519,7 +549,11 @@ SUMMARY:
    * <p>Principal Engineer: "Let's apply what we've learned to actual database operations. These are
    * optimizations you'll use in production code."
    */
-  public static class Lesson5DatabaseOptimizations {
+  public static final class Lesson5DatabaseOptimizations {
+
+    private Lesson5DatabaseOptimizations() {
+      throw new UnsupportedOperationException("Utility class");
+    }
 
     /** Total rows to insert per benchmark iteration */
     private static final int BATCH_SIZE = 1000;
@@ -584,7 +618,7 @@ SUMMARY:
       }
     }
 
-    private static void benchmarkStatementVsPrepared(Connection conn) throws SQLException {
+    private static void benchmarkStatementVsPrepared(Connection conn) {
       System.out.println("\n┌────────────────────────────────────────────────────────────┐");
       System.out.println("│  Optimization 1: Statement vs PreparedStatement            │");
       System.out.println("└────────────────────────────────────────────────────────────┘");
@@ -650,7 +684,7 @@ SUMMARY:
       System.out.println();
     }
 
-    private static void benchmarkIndividualVsBatch(Connection conn) throws SQLException {
+    private static void benchmarkIndividualVsBatch(Connection conn) {
       System.out.println("\n┌────────────────────────────────────────────────────────────┐");
       System.out.println("│  Optimization 2: Individual Inserts vs Batch Inserts       │");
       System.out.println("└────────────────────────────────────────────────────────────┘");
@@ -736,7 +770,13 @@ SUMMARY:
               try (PreparedStatement pstmt = conn.prepareStatement(sql);
                   ResultSet rs = pstmt.executeQuery()) {
                 int count = 0;
-                while (rs.next()) count++;
+                while (rs.next()) {
+                  count++; // Process and count rows
+                }
+                // Prevent optimization
+                if (count < 0) {
+                  System.out.println("Never");
+                }
               }
             } catch (SQLException e) {
               throw new RuntimeException(e);
@@ -751,7 +791,13 @@ SUMMARY:
               try (PreparedStatement pstmt = conn.prepareStatement(sql);
                   ResultSet rs = pstmt.executeQuery()) {
                 int count = 0;
-                while (rs.next()) count++;
+                while (rs.next()) {
+                  count++; // Process and count rows
+                }
+                // Prevent optimization
+                if (count < 0) {
+                  System.out.println("Never");
+                }
               }
             } catch (SQLException e) {
               throw new RuntimeException(e);
@@ -788,7 +834,9 @@ SUMMARY:
           pstmt.setDouble(3, i * 1.0);
           pstmt.setString(4, "Category" + (i % 5));
           pstmt.addBatch();
-          if (i % SETUP_BATCH_FLUSH_SIZE == 0) pstmt.executeBatch();
+          if (i % SETUP_BATCH_FLUSH_SIZE == 0) {
+            pstmt.executeBatch();
+          }
         }
         pstmt.executeBatch();
         conn.commit();

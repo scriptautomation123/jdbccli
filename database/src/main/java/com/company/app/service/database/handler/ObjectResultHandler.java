@@ -1,5 +1,7 @@
 package com.company.app.service.database.handler;
 
+import static java.util.Locale.ROOT;
+
 import java.lang.reflect.Method;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
@@ -111,64 +113,140 @@ public final class ObjectResultHandler<T> implements ResultSetHandler<T> {
     int columnCount = metaData.getColumnCount();
     JdbcPropertyAccessor[] accessors = new JdbcPropertyAccessor[columnCount];
 
-    // Build setter lookup map: propertyName (lowercase) -> Method
-    Map<String, Method> setters = new HashMap<>();
-    for (Method method : type.getMethods()) {
-      if (method.getName().startsWith("set") && method.getParameterCount() == 1) {
-        String propertyName = method.getName().substring(3).toLowerCase();
-        setters.put(propertyName, method);
-      }
-    }
-
+    Map<String, Method> setters = buildSetterMap(type);
     TypeHandlerRegistry registry = TypeHandlerRegistry.getInstance();
 
     for (int i = 0; i < columnCount; i++) {
-      String columnName = metaData.getColumnLabel(i + 1); // Use label for aliases
-      if (columnName == null) {
-        columnName = metaData.getColumnName(i + 1);
-      }
-
-      // Try exact match first
-      String propertyName = columnName.toLowerCase();
-      Method setter = setters.get(propertyName);
-
-      // Try underscore-to-camelCase conversion
-      if (setter == null && columnName.contains("_")) {
-        String camelName = UnderscoreToCamelCase.convert(columnName).toLowerCase();
-        setter = setters.get(camelName);
-        if (setter != null) {
-          propertyName = camelName;
-        }
-      }
-
-      if (setter == null) {
-        // No matching property - use no-op accessor
-        LOG.debug("No setter found for column '{}' on type {}", columnName, type.getName());
-        accessors[i] = JdbcPropertyAccessor.noOp(columnName);
-      } else {
-        // Get type handler for the property type
-        Class<?> paramType = setter.getParameterTypes()[0];
-        TypeHandler<?> handler = registry.getHandler(paramType);
-
-        if (handler == null) {
-          // Fall back to Object handler
-          LOG.warn(
-              "No TypeHandler for type {} (property '{}'), using Object fallback",
-              paramType.getName(),
-              propertyName);
-          handler = registry.getHandler(Object.class);
-        }
-
-        accessors[i] = JdbcPropertyAccessor.create(propertyName, setter, handler);
-        LOG.trace(
-            "Mapped column '{}' -> property '{}' ({})",
-            columnName,
-            propertyName,
-            paramType.getName());
-      }
+      String columnName = getColumnName(metaData, i + 1);
+      accessors[i] = createAccessor(type, columnName, setters, registry);
     }
 
     return accessors;
+  }
+
+  /**
+   * Builds a map of setter methods keyed by property name (lowercase).
+   *
+   * @param type the target bean class
+   * @return map of property name to setter method
+   */
+  private static <T> Map<String, Method> buildSetterMap(Class<T> type) {
+    Map<String, Method> setters = new HashMap<>();
+    for (Method method : type.getMethods()) {
+      if (method.getName().startsWith("set") && method.getParameterCount() == 1) {
+        String propertyName = method.getName().substring(3).toLowerCase(ROOT);
+        setters.put(propertyName, method);
+      }
+    }
+    return setters;
+  }
+
+  /**
+   * Gets the column name from metadata, preferring label over name.
+   *
+   * @param metaData the ResultSet metadata
+   * @param columnIndex the column index (1-based)
+   * @return the column name
+   * @throws SQLException if metadata cannot be read
+   */
+  private static String getColumnName(ResultSetMetaData metaData, int columnIndex)
+      throws SQLException {
+    String columnName = metaData.getColumnLabel(columnIndex);
+    return columnName != null ? columnName : metaData.getColumnName(columnIndex);
+  }
+
+  /**
+   * Creates a property accessor for a column.
+   *
+   * @param type the target bean class
+   * @param columnName the column name
+   * @param setters the setter lookup map
+   * @param registry the type handler registry
+   * @return the property accessor
+   */
+  private static <T> JdbcPropertyAccessor createAccessor(
+      Class<T> type, String columnName, Map<String, Method> setters, TypeHandlerRegistry registry) {
+
+    PropertyMatch match = findSetter(columnName, setters);
+
+    if (match.setter == null) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("No setter found for column '{}' on type {}", columnName, type.getName());
+      }
+      return JdbcPropertyAccessor.noOp(columnName);
+    }
+
+    return createAccessorWithHandler(columnName, match, registry);
+  }
+
+  /**
+   * Finds the matching setter for a column name.
+   *
+   * @param columnName the column name
+   * @param setters the setter lookup map
+   * @return the property match result
+   */
+  private static PropertyMatch findSetter(String columnName, Map<String, Method> setters) {
+    String propertyName = columnName.toLowerCase(ROOT);
+    Method setter = setters.get(propertyName);
+
+    if (setter == null && columnName.contains("_")) {
+      String camelName = UnderscoreToCamelCase.convert(columnName).toLowerCase(ROOT);
+      setter = setters.get(camelName);
+      if (setter != null) {
+        propertyName = camelName;
+      }
+    }
+
+    return new PropertyMatch(setter, propertyName);
+  }
+
+  /**
+   * Creates an accessor with a type handler.
+   *
+   * @param columnName the column name
+   * @param match the property match
+   * @param registry the type handler registry
+   * @return the property accessor
+   */
+  private static JdbcPropertyAccessor createAccessorWithHandler(
+      String columnName, PropertyMatch match, TypeHandlerRegistry registry) {
+
+    Class<?> paramType = match.setter.getParameterTypes()[0];
+    TypeHandler<?> handler = registry.getHandler(paramType);
+
+    if (handler == null) {
+      if (LOG.isWarnEnabled()) {
+        LOG.warn(
+            "No TypeHandler for type {} (property '{}'), using Object fallback",
+            paramType.getName(),
+            match.propertyName);
+      }
+      handler = registry.getHandler(Object.class);
+    }
+
+    JdbcPropertyAccessor accessor =
+        JdbcPropertyAccessor.create(match.propertyName, match.setter, handler);
+    if (LOG.isTraceEnabled()) {
+      LOG.trace(
+          "Mapped column '{}' -> property '{}' ({})",
+          columnName,
+          match.propertyName,
+          paramType.getName());
+    }
+
+    return accessor;
+  }
+
+  /** Helper class to hold setter matching result. */
+  private static final class PropertyMatch {
+    final Method setter;
+    final String propertyName;
+
+    PropertyMatch(Method setter, String propertyName) {
+      this.setter = setter;
+      this.propertyName = propertyName;
+    }
   }
 
   @Override

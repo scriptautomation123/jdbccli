@@ -54,5 +54,10 @@
 
   "remoteUser": "vscode",
 
+  "containerEnv": {
+    "DOCKER_API_VERSION": "1.52",
+    "DOCKER_HOST": "unix:///var/run/docker.sock"
+  },
+
   "postCreateCommand": "bash -c 'git clone --depth=1 https://github.com/romkatv/powerlevel10k.git ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/themes/powerlevel10k && sed -i \"s/ZSH_THEME=\\\"robbyrussell\\\"/ZSH_THEME=\\\"powerlevel10k\\/powerlevel10k\\\"/g\" ~/.zshrc && echo \"POWERLEVEL9K_DISABLE_CONFIGURATION_WIZARD=true\" >> ~/.zshrc && java -version && mvn -version && docker --version && docker compose version'"
 }

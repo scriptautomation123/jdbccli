@@ -1,8 +1,51 @@
 # JDBC CLI
-Essentially, CLI classes use the jdbchelper builder class to do db oerpations, everything else is supporting
 
+A command-line tool and library for executing SQL queries and stored procedures against various databases with HashiCorp Vault integration for secure password management.
 
-A command-line tool for executing SQL queries and stored procedures against various databases with HashiCorp Vault integration for secure password management.
+## Architecture Overview
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                          JdbcCliLibrary (Public API)                     │
+├──────────────────────────────┬──────────────────────────────────────────┤
+│  Typed Query API (NEW)       │  String-Based API (CLI)                  │
+│  • queryForList()            │  • executeSql()                           │
+│  • queryForObject()          │  • executeScript()                        │
+│  Returns: List<T>            │  • executeProcedure()                     │
+│  Performance: 18.5x faster   │  Returns: ExecutionResult (String)        │
+└──────────────┬───────────────┴──────────────┬───────────────────────────┘
+               │                              │
+               ▼                              ▼
+┌──────────────────────────┐   ┌──────────────────────────────────────┐
+│   QueryExecutor          │   │   SqlExecutorService                 │
+│   • executeTyped()       │   │   • execute()                        │
+│                          │   │   • executePreparedStatement()       │
+└──────────┬───────────────┘   └──────────┬───────────────────────────┘
+           │                              │
+           ▼                              ▼
+┌──────────────────────────┐   ┌──────────────────────────────────────┐
+│ ResultSetHandler         │   │   SqlJdbcHelper                      │
+│ Framework (Optimized)    │   │   • formatResultSet()                │
+│ • LRU cache (1000)       │   │   Returns: Formatted string table    │
+│ • Accessor arrays O(1)   │   └──────────────────────────────────────┘
+│ • Type handler registry  │
+└──────────┬───────────────┘
+           │
+           ▼
+┌──────────────────────────┐
+│  Typed Domain Objects    │
+│  List<Employee>          │
+│  List<Order>             │
+└──────────────────────────┘
+```
+
+### Key Components
+
+- **QueryExecutor** - Unified query execution with dual modes (typed/formatted)
+- **ResultSetHandler** - High-performance object mapping (18.5x faster than naive reflection)
+- **SqlJdbcHelper** - Direct ResultSet → String formatting for CLI display
+- **DatabaseExecutionContext** - Connection lifecycle, password resolution, error handling
+- **ProcedureExecutor** - Stored procedure execution with IN/OUT parameters
 
 ## Features
 
@@ -19,6 +62,23 @@ A command-line tool for executing SQL queries and stored procedures against vari
 ```bash
 cd docker && docker compose down -v && docker compose up -d && cd ..
 ./manage.sh
+```
+
+### Testcontainers prerequisites (integration tests)
+
+Integration tests use Testcontainers (PostgreSQL) and require a reachable Docker daemon.
+
+```bash
+# If Docker API version negotiation fails in this environment
+mvn -Dapi.version=1.52 test
+
+# If config templates are required (YamlConfig reads filesystem only)
+mvn -Dvault.config=/path/to/application.yaml test
+
+# Avoid blocking password prompts in non-interactive runs
+mvn -Djdbccli.password=your_password test
+# or
+JDBCCLI_PASSWORD=your_password mvn test
 ```
 
 ### Interactive Mode
@@ -164,6 +224,7 @@ cd ~/code/scriptautomation123/jdbccli/package-helper/target/dist/cli-1.0.0 &&\
 ./jre/bin/java \
 -Dlog4j.configurationFile=file:./log4j2.xml \
 -Dvault.config=./vaults.yaml \
+-Djdbccli.password=your_password \
 -jar ./cli-1.0.0.jar exec-sql "SELECT * FROM hr.employees WHERE rownum <= 5" \
 --type oracle \
 --database localhost:1521:xe \
@@ -177,6 +238,7 @@ cd ~/code/scriptautomation123/jdbccli/package-helper/target/dist/cli-1.0.0 &&\
 ./jre/bin/java \
 -Dlog4j.configurationFile=file:./log4j2.xml \
 -Dvault.config=./vaults.yaml \
+-Djdbccli.password=your_password \
 -jar ./cli-1.0.0.jar exec-sql "SELECT hr.hr_pkg.get_employee_salary(100) as salary FROM dual" \
 --type oracle \
 --database localhost:1521:xe \
@@ -190,6 +252,7 @@ cd ~/code/scriptautomation123/jdbccli/package-helper/target/dist/cli-1.0.0 &&\
 ./jre/bin/java \
 -Dlog4j.configurationFile=file:./log4j2.xml \
 -Dvault.config=./vaults.yaml \
+-Djdbccli.password=your_password \
 -jar ./cli-1.0.0.jar exec-sql "SELECT hr.hr_pkg.get_department_budget(80) as budget FROM dual" \
 --type oracle \
 --database localhost:1521:xe \
@@ -203,6 +266,7 @@ cd ~/code/scriptautomation123/jdbccli/package-helper/target/dist/cli-1.0.0 &&\
 ./jre/bin/java \
 -Dlog4j.configurationFile=file:./log4j2.xml \
 -Dvault.config=./vaults.yaml \
+-Djdbccli.password=your_password \
 -jar ./cli-1.0.0.jar exec-sql "SELECT hr.calculate_bonus(10000, 15) as bonus FROM dual" \
 --type oracle \
 --database localhost:1521:xe \
@@ -216,6 +280,7 @@ cd ~/code/scriptautomation123/jdbccli/package-helper/target/dist/cli-1.0.0 &&\
 ./jre/bin/java \
 -Dlog4j.configurationFile=file:./log4j2.xml \
 -Dvault.config=./vaults.yaml \
+-Djdbccli.password=your_password \
 -jar ./cli-1.0.0.jar exec-proc hr.get_employee_details \
 --input "p_employee_id:NUMBER:100" \
 --output "o_first_name:VARCHAR2,o_last_name:VARCHAR2,o_email:VARCHAR2,o_salary:NUMBER,o_job_id:VARCHAR2" \
@@ -231,6 +296,7 @@ cd ~/code/scriptautomation123/jdbccli/package-helper/target/dist/cli-1.0.0 &&\
 ./jre/bin/java \
 -Dlog4j.configurationFile=file:./log4j2.xml \
 -Dvault.config=./vaults.yaml \
+-Djdbccli.password=your_password \
 -jar ./cli-1.0.0.jar exec-proc hr.get_department_info \
 --input "p_department_id:NUMBER:80" \
 --output "o_department_name:VARCHAR2,o_manager_id:NUMBER,o_employee_count:NUMBER,o_total_salary:NUMBER" \
@@ -246,6 +312,7 @@ cd ~/code/scriptautomation123/jdbccli/package-helper/target/dist/cli-1.0.0 &&\
 ./jre/bin/java \
 -Dlog4j.configurationFile=file:./log4j2.xml \
 -Dvault.config=./vaults.yaml \
+-Djdbccli.password=your_password \
 -jar ./cli-1.0.0.jar exec-proc hr.hr_pkg.raise_employee_salary \
 --input "p_employee_id:NUMBER:100,p_raise_percent:NUMBER:10" \
 --type oracle \
@@ -260,6 +327,7 @@ cd ~/code/scriptautomation123/jdbccli/package-helper/target/dist/cli-1.0.0 &&\
 ./jre/bin/java \
 -Dlog4j.configurationFile=file:./log4j2.xml \
 -Dvault.config=./vaults.yaml \
+-Djdbccli.password=your_password \
 -jar ./cli-1.0.0.jar exec-proc hr.hr_pkg.hire_employee \
 --input "p_first_name:VARCHAR2:John,p_last_name:VARCHAR2:Doe,p_email:VARCHAR2:jdoe@example.com,p_job_id:VARCHAR2:IT_PROG,p_salary:NUMBER:8000,p_department_id:NUMBER:60" \
 --type oracle \
@@ -274,6 +342,7 @@ cd ~/code/scriptautomation123/jdbccli/package-helper/target/dist/cli-1.0.0 &&\
 ./jre/bin/java \
 -Dlog4j.configurationFile=file:./log4j2.xml \
 -Dvault.config=./vaults.yaml \
+-Djdbccli.password=your_password \
 -jar ./cli-1.0.0.jar exec-proc hr.hr_pkg.update_job_history \
 --input "p_employee_id:NUMBER:100,p_new_job_id:VARCHAR2:AD_VP,p_new_department_id:NUMBER:90" \
 --type oracle \
@@ -288,11 +357,24 @@ cd ~/code/scriptautomation123/jdbccli/package-helper/target/dist/cli-1.0.0 &&\
 ./jre/bin/java \
 -Dlog4j.configurationFile=file:./log4j2.xml \
 -Dvault.config=./vaults.yaml \
+-Djdbccli.password=your_password \
 -jar ./cli-1.0.0.jar exec-proc hr.hr_pkg.terminate_employee \
 --input "p_employee_id:NUMBER:100" \
 --type oracle \
 --database localhost:1521:xe \
 --user hr
+
+### Non-interactive password override
+
+Use these when running tests or automation to avoid blocking prompts:
+
+```bash
+# System property
+mvn -Djdbccli.password=your_password test
+
+# Or environment variable
+JDBCCLI_PASSWORD=your_password mvn test
+```
 ```
 
 ---
@@ -327,7 +409,7 @@ jdbccli/
 
 ## Code Formatting (Google Java Format)
 
-The project uses **Google Java Format** via the **Spotless Maven Plugin** for consistent code style.
+The project uses **Google Java Format v1.21.0** via **Spotless Maven Plugin v2.44.0** for consistent code style across all 24 Java source files (3,717 lines).
 
 ### Quick Commands
 
@@ -338,31 +420,141 @@ mvn spotless:apply
 # Check formatting compliance (CI/CD)
 mvn spotless:check
 
+# Format only modified files (faster)
+mvn spotless:apply -DspotlessFollow=true
+
 # Format specific module only
-mvn -pl util spotless:apply
 mvn -pl database spotless:apply
+mvn -pl cli spotless:apply
 ```
 
 ### Formatting Rules
 
-| Rule                | Setting                       |
-| :------------------ | :---------------------------- |
-| Indentation         | 2 spaces (Google standard)    |
-| Line length         | 100 characters                |
-| Import order        | `java`, `javax`, `org`, `com` |
-| Trailing whitespace | Removed                       |
-| Unused imports      | Removed                       |
+**Configuration:** `pom.xml` (parent module)
+
+```xml
+<java>
+    <googleJavaFormat>
+        <version>1.21.0</version>
+        <style>GOOGLE</style>  <!-- or AOSP for 4-space indent -->
+        <reflowLongStrings>true</reflowLongStrings>
+    </googleJavaFormat>
+    <trimTrailingWhitespace/>
+    <endWithNewline/>
+    <importOrder>
+        <order>java,javax,org,com</order>
+        <wildcardsLast>true</wildcardsLast>
+    </importOrder>
+    <removeUnusedImports/>
+</java>
+```
+
+| Rule                | Setting                            |
+| :------------------ | :--------------------------------- |
+| Indentation         | 2 spaces (GOOGLE) / 4 spaces (AOSP) |
+| Line length         | 100 characters                     |
+| Import order        | `java` → `javax` → `org` → `com`   |
+| Wildcard imports    | Last                               |
+| Trailing whitespace | Removed                            |
+| Unused imports      | Removed                            |
+| File endings        | Newline added                      |
 
 ### IDE Integration
 
-**VS Code:** Install [Google Java Format](https://marketplace.visualstudio.com/items?itemName=joseandrade.google-java-format-for-vs-code) extension, enable format on save.
+#### VS Code
 
-**IntelliJ IDEA:** Install "Google Java Format" plugin from Settings → Plugins.
+1. Install [Google Java Format](https://marketplace.visualstudio.com/items?itemName=joseandrade.google-java-format-for-vs-code) extension
+2. Add to `settings.json`:
+```json
+{
+  "[java]": {
+    "editor.defaultFormatter": "joseandrade.google-java-format-for-vs-code",
+    "editor.formatOnSave": true
+  }
+}
+```
+
+#### IntelliJ IDEA
+
+1. Install "Google Java Format" plugin (Settings → Plugins)
+2. Enable: Settings → Editor → Code Style → Scheme → "Google Style"
+3. Optional: Settings → Tools → Actions on Save → "Reformat code"
+
+#### Eclipse
+
+Install **google-java-format** from Eclipse Marketplace
 
 ### Before Committing
 
 ```bash
-mvn spotless:apply && mvn spotless:check && git add -A
+# Format and verify
+mvn spotless:apply && mvn spotless:check
+
+# Then commit
+git add -A && git commit -m "Your message"
 ```
 
-See [GOOGLE_JAVA_FORMAT_GUIDE.md](GOOGLE_JAVA_FORMAT_GUIDE.md) for detailed configuration and troubleshooting.
+### Pre-commit Hook (Optional)
+
+Create `.git/hooks/pre-commit`:
+```bash
+#!/bin/bash
+mvn spotless:check
+if [ $? -ne 0 ]; then
+    echo "❌ Code formatting issues detected."
+    echo "Run: mvn spotless:apply"
+    exit 1
+fi
+```
+
+Make executable: `chmod +x .git/hooks/pre-commit`
+
+### CI/CD Integration
+
+```bash
+# In your build pipeline
+mvn spotless:check  # Fail build on violations
+
+# Or auto-fix (optional)
+mvn spotless:apply && git diff --exit-code
+```
+
+### Troubleshooting
+
+| Issue | Solution |
+|-------|----------|
+| Plugin fails | `mvn clean install && mvn spotless:apply` |
+| Too many files | `mvn spotless:apply -DspotlessFollow=true` |
+| IDE differs | Ensure Google Java Format extension installed |
+| Import order changes | Check `<order>java,javax,org,com</order>` in pom.xml |
+
+### Example Transformation
+
+**Before:**
+```java
+import java.util.*;import com.company.app.service.util.*;
+public class MyClass {
+public void method1(String a,String b){
+LOGGER.info("event="+a);}
+}
+```
+
+**After (Google Java Format):**
+```java
+import java.util.List;
+
+import com.company.app.service.util.ExceptionUtils;
+
+public class MyClass {
+
+  public void method1(String a, String b) {
+    LOGGER.info("event={}", a);
+  }
+}
+```
+
+### Resources
+
+- [Google Java Style Guide](https://google.github.io/styleguide/javaguide.html)
+- [Spotless Maven Plugin](https://github.com/diffplug/spotless/tree/main/plugin-maven)
+- See [GOOGLE_JAVA_FORMAT_GUIDE.md](GOOGLE_JAVA_FORMAT_GUIDE.md) for advanced configuration

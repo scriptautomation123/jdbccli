@@ -27,14 +27,29 @@ public class PasswordResolver {
   /** Supplier for console password prompting */
   private final Supplier<String> passwordPrompter;
 
+  /** When true, bypass vault lookup and use the supplied password directly. */
+  private final boolean preferDirectPassword;
+
   /**
    * Constructs a PasswordResolver with a password prompter function.
    *
    * @param passwordPrompter function to prompt for password when other methods fail
    */
   public PasswordResolver(final Supplier<String> passwordPrompter) {
+    this(passwordPrompter, false);
+  }
+
+  /**
+   * Constructs a PasswordResolver with an option to skip vault lookups.
+   *
+   * @param passwordPrompter function to supply a password
+   * @param preferDirectPassword when true, return the supplied password without vault lookups
+   */
+  public PasswordResolver(
+      final Supplier<String> passwordPrompter, final boolean preferDirectPassword) {
     this.passwordPrompter =
         Objects.requireNonNull(passwordPrompter, "Password prompter cannot be null");
+    this.preferDirectPassword = preferDirectPassword;
   }
 
   /**
@@ -62,10 +77,21 @@ public class PasswordResolver {
   }
 
   private Optional<String> attemptPasswordResolution(final PasswordRequest request) {
+    if (preferDirectPassword) {
+      return Optional.ofNullable(passwordPrompter.get());
+    }
     // Try direct vault parameters first
     if (request.hasDirectVaultParams()) {
       LoggingUtils.logPasswordResolution(request.getUser(), DIRECT_VAULT);
-      return resolveWithDirectVaultParams(request);
+      try {
+        return resolveWithDirectVaultParams(request);
+      } catch (RuntimeException ex) {
+        final Optional<String> fallback = Optional.ofNullable(passwordPrompter.get());
+        if (fallback.isPresent()) {
+          return fallback;
+        }
+        throw ex;
+      }
     }
 
     // Try vault lookup

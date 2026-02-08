@@ -58,7 +58,11 @@ public class ExecSqlCmd extends BaseDatabaseCliCommand {
                 .executeSql(
                     getTypeString(), database, user, sql, parseParams(params), createVaultConfig());
       }
-      result.formatOutput(System.out); // NOSONAR
+      if (result.getExitCode() == 0) {
+        result.formatOutput(System.out); // NOSONAR
+      } else {
+        result.formatOutput(System.err); // NOSONAR
+      }
       return result.getExitCode();
 
     } catch (Exception e) {
@@ -83,10 +87,31 @@ public class ExecSqlCmd extends BaseDatabaseCliCommand {
     for (final String param : paramArray) {
       final String trimmed = param.trim();
       if (!trimmed.isEmpty()) {
-        paramList.add(trimmed);
+        paramList.add(inferParamValue(trimmed));
       }
     }
 
     return paramList;
+  }
+
+  private Object inferParamValue(final String rawValue) {
+    final String text = rawValue.trim();
+    if (text.isEmpty()) {
+      return "";
+    }
+    if ("true".equalsIgnoreCase(text) || "false".equalsIgnoreCase(text)) {
+      return Boolean.parseBoolean(text);
+    }
+    if (text.matches("^-?\\d+$")) {
+      try {
+        return Integer.parseInt(text);
+      } catch (NumberFormatException ignored) {
+        return Long.parseLong(text);
+      }
+    }
+    if (text.matches("^-?\\d+\\.\\d+$")) {
+      return Double.parseDouble(text);
+    }
+    return text;
   }
 }
