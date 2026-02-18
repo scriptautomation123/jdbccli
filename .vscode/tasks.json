@@ -84,6 +84,94 @@
       }
     },
     {
+      "label": "maven: test (integration postgres)",
+      "type": "shell",
+      "command": "mvn",
+      "args": [
+        "test",
+        "-pl",
+        "database",
+        "-Dtest=JdbcCliLibraryIntegrationTest",
+        "-Ddatabase=postgres",
+        "-Dapi.version=1.52",
+        "-Dvault.config=/workspaces/jdbccli/cli/src/main/resources/application.yaml",
+        "-Djdbccli.password=test"
+      ],
+      "group": "test",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "maven: test (integration mysql)",
+      "type": "shell",
+      "command": "mvn",
+      "args": [
+        "test",
+        "-pl",
+        "database",
+        "-Dtest=JdbcCliLibraryIntegrationTest",
+        "-Ddatabase=mysql",
+        "-Dapi.version=1.52",
+        "-Dvault.config=/workspaces/jdbccli/cli/src/main/resources/application.yaml",
+        "-Djdbccli.password=test"
+      ],
+      "group": "test",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "maven: test (integration sqlserver)",
+      "type": "shell",
+      "command": "mvn",
+      "args": [
+        "test",
+        "-pl",
+        "database",
+        "-Dtest=JdbcCliLibraryIntegrationTest",
+        "-Ddatabase=sqlserver",
+        "-Dapi.version=1.52",
+        "-Dvault.config=/workspaces/jdbccli/cli/src/main/resources/application.yaml",
+        "-Djdbccli.password=test"
+      ],
+      "group": "test",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "maven: test (integration oracle)",
+      "type": "shell",
+      "command": "mvn",
+      "args": [
+        "test",
+        "-pl",
+        "database",
+        "-Dtest=JdbcCliLibraryIntegrationTest",
+        "-Ddatabase=oracle",
+        "-Dapi.version=1.52",
+        "-Dvault.config=/workspaces/jdbccli/cli/src/main/resources/application.yaml",
+        "-Djdbccli.password=test"
+      ],
+      "group": "test",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "shared"
+      }
+    },
+    {
       "label": "maven: test (focused performance)",
       "type": "shell",
       "command": "mvn",

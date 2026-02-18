@@ -19,29 +19,5 @@ This directory contains the curated documentation for the JDBC CLI project and i
 
 ## Quick Commands
 
-```bash
-# Full test run (requires Docker for integration tests)
-mvn test \
-  -Dapi.version=1.52 \
-  -Dvault.config=/workspaces/jdbccli/cli/src/main/resources/application.yaml \
-  -Djdbccli.password=test
-
-# Format code
-mvn spotless:apply
-
-# Database module tests only
-mvn test -pl database \
-  -Dapi.version=1.52 \
-  -Dvault.config=/workspaces/jdbccli/cli/src/main/resources/application.yaml \
-  -Djdbccli.password=test
-```
-
-## Non-Interactive Password Override
-
-```bash
-# System property
-mvn -Djdbccli.password=your_password test
-
-# Or environment variable
-JDBCCLI_PASSWORD=your_password mvn test
-```
+See [COMPREHENSIVE_TEST_REPORT.md](COMPREHENSIVE_TEST_REPORT.md) for the latest
+test and benchmark commands.

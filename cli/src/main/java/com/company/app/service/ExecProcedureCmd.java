@@ -71,13 +71,13 @@ public class ExecProcedureCmd extends BaseDatabaseCliCommand {
                   outParams,
                   createVaultConfig());
       if (result.getExitCode() == 0) {
-        result.formatOutput(System.out);
+        result.formatOutput(System.out); // NOSONAR
       } else {
-        result.formatOutput(System.err);
+        result.formatOutput(System.err); // NOSONAR
       }
       return result.getExitCode();
     } catch (Exception e) {
-      return ExceptionUtils.handleCliException(e, "execute procedure", System.err);
+      return ExceptionUtils.handleCliException(e, "execute procedure", System.err); // NOSONAR
     }
   }
 }

@@ -127,7 +127,7 @@ public final class JdbcCliLibrary {
   /**
    * Executes a SQL statement with parameters.
    *
-   * @param dbType database type (oracle, mysql, postgresql, h2)
+   * @param dbType database type (oracle, mysql, postgresql, sqlserver, h2)
    * @param database database connection string (JDBC URL)
    * @param user database username
    * @param sql SQL statement to execute (can include ? placeholders)
@@ -156,7 +156,7 @@ public final class JdbcCliLibrary {
   /**
    * Executes a SQL statement without parameters.
    *
-   * @param dbType database type (oracle, mysql, postgresql, h2)
+   * @param dbType database type (oracle, mysql, postgresql, sqlserver, h2)
    * @param database database connection string (JDBC URL)
    * @param user database username
    * @param sql SQL statement to execute
@@ -176,7 +176,7 @@ public final class JdbcCliLibrary {
   /**
    * Executes a SQL script file.
    *
-   * @param dbType database type (oracle, mysql, postgresql, h2)
+   * @param dbType database type (oracle, mysql, postgresql, sqlserver, h2)
    * @param database database connection string (JDBC URL)
    * @param user database username
    * @param scriptPath path to the SQL script file
@@ -203,7 +203,7 @@ public final class JdbcCliLibrary {
   /**
    * Executes a stored procedure.
    *
-   * @param dbType database type (oracle, mysql, postgresql, h2)
+   * @param dbType database type (oracle, mysql, postgresql, sqlserver, h2)
    * @param database database connection string (JDBC URL)
    * @param user database username
    * @param procedureName stored procedure name
@@ -243,7 +243,7 @@ public final class JdbcCliLibrary {
    *     .execute(library);
    * }</pre>
    *
-   * @param dbType database type (oracle, mysql, postgresql, h2)
+   * @param dbType database type (oracle, mysql, postgresql, sqlserver, h2)
    * @param database database connection string (JDBC URL)
    * @param user database username
    * @return new SqlRequestConfig instance
@@ -297,7 +297,7 @@ public final class JdbcCliLibrary {
    * }</pre>
    *
    * @param <T> result type
-   * @param dbType database type (oracle, mysql, postgresql, h2)
+   * @param dbType database type (oracle, mysql, postgresql, sqlserver, h2)
    * @param database database connection string (JDBC URL)
    * @param user database username
    * @param sql SELECT query (can include ? placeholders)
@@ -305,7 +305,7 @@ public final class JdbcCliLibrary {
    * @param resultClass class to map rows to (must have setters matching column names)
    * @param vaultConfig vault configuration for password resolution
    * @return list of typed objects, empty list if no rows
-   * @throws RuntimeException if query execution or mapping fails
+   * @throws QueryExecutionException if query execution or mapping fails
    */
   public <T> List<T> queryForList(
       final String dbType,
@@ -351,7 +351,7 @@ public final class JdbcCliLibrary {
 
     // Extract typed results from ExecutionResult
     if (result.getExitCode() != 0) {
-      throw new RuntimeException(result.getMessage());
+      throw new QueryExecutionException(result.getMessage());
     }
 
     @SuppressWarnings("unchecked")
@@ -444,7 +444,7 @@ public final class JdbcCliLibrary {
    * ExecutionResult result = config.execute(library);
    * }</pre>
    *
-   * @param dbType database type (oracle, mysql, postgresql, h2)
+   * @param dbType database type (oracle, mysql, postgresql, sqlserver, h2)
    * @param database database connection string (JDBC URL)
    * @param user database username
    * @param sql SQL statement to execute (nullable)

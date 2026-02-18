@@ -3,7 +3,6 @@ package com.company.app.service.database;
 import java.math.BigDecimal;
 import java.sql.CallableStatement;
 import java.sql.Connection;
-import java.sql.DatabaseMetaData;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
@@ -41,6 +40,10 @@ public class ProcedureExecutor {
 
   /** Context for parameter parsing operations */
   private static final String PARAMETER_PARSING = "parameter_parsing";
+
+  /** Error message prefix for procedure execution failures */
+  private static final String EXEC_PROC_ERROR_PREFIX =
+      "Failed to execute procedure with string parameters: ";
 
   /**
    * Allowlist pattern for valid procedure names to prevent SQL injection. Allows: alphanumeric,
@@ -235,35 +238,37 @@ public class ProcedureExecutor {
       final List<ProcedureParam> inputs = parseStringInputParams(inputParams);
       final List<ProcedureParam> outputs = parseStringOutputParams(outputParams);
       if (outputs.isEmpty()) {
-        try {
-          return executeFunctionSelect(conn, procFullName, inputs);
-        } catch (SQLException ex) {
-          if (shouldFallbackToProcedure(ex)) {
-            return executeDirectCallForProcedure(conn, procFullName, inputs);
-          }
-          throw ex;
-        }
+        return tryExecuteAsFunction(conn, procFullName, inputs);
       }
 
       return executeCallableForProcedure(conn, procFullName, inputs, outputs);
-    } catch (SQLException e) {
-      LoggingUtils.logStructuredError(
-          "procedure_execution",
-          "execute",
-          FAILED,
-          "Failed to execute procedure with string parameters: " + procFullName,
-          e);
-      throw ExceptionUtils.wrap(
-          e, "Failed to execute procedure with string parameters: " + procFullName);
     } catch (Exception e) {
       LoggingUtils.logStructuredError(
-          "procedure_execution",
-          "execute",
-          FAILED,
-          "Failed to execute procedure with string parameters: " + procFullName,
-          e);
-      throw ExceptionUtils.wrap(
-          e, "Failed to execute procedure with string parameters: " + procFullName);
+          "procedure_execution", "execute", FAILED, EXEC_PROC_ERROR_PREFIX + procFullName, e);
+      throw ExceptionUtils.wrap(e, EXEC_PROC_ERROR_PREFIX + procFullName);
+    }
+  }
+
+  /**
+   * Attempts to execute a procedure/function without output parameters. First tries SELECT syntax
+   * (for functions), then falls back to CALL syntax (for procedures) if needed.
+   *
+   * @param conn database connection
+   * @param procFullName procedure/function name
+   * @param inputs input parameters
+   * @return map of results
+   * @throws SQLException if execution fails
+   */
+  private Map<String, Object> tryExecuteAsFunction(
+      final Connection conn, final String procFullName, final List<ProcedureParam> inputs)
+      throws SQLException {
+    try {
+      return executeFunctionSelect(conn, procFullName, inputs);
+    } catch (SQLException ex) {
+      if (shouldFallbackToProcedure(ex)) {
+        return executeDirectCallForProcedure(conn, procFullName, inputs);
+      }
+      throw ex;
     }
   }
 
@@ -289,11 +294,7 @@ public class ProcedureExecutor {
     if (inputs.isEmpty()) {
       sql.append("()");
     } else {
-      final StringJoiner placeholders = new StringJoiner(",", "(", ")");
-      for (int i = 0; i < inputs.size(); i++) {
-        placeholders.add("?");
-      }
-      sql.append(placeholders);
+      sql.append("(").append(String.join(",", Collections.nCopies(inputs.size(), "?"))).append(")");
     }
 
     try (PreparedStatement statement = conn.prepareStatement(sql.toString())) {
@@ -315,11 +316,7 @@ public class ProcedureExecutor {
     if (inputs.isEmpty()) {
       sql.append("()");
     } else {
-      final StringJoiner placeholders = new StringJoiner(",", "(", ")");
-      for (int i = 0; i < inputs.size(); i++) {
-        placeholders.add("?");
-      }
-      sql.append(placeholders);
+      sql.append("(").append(String.join(",", Collections.nCopies(inputs.size(), "?"))).append(")");
     }
 
     try (PreparedStatement statement = conn.prepareStatement(sql.toString())) {
@@ -360,72 +357,6 @@ public class ProcedureExecutor {
       }
     }
     return false;
-  }
-
-  private boolean isFunction(final Connection conn, final String procFullName) throws SQLException {
-    return hasMetadataMatch(conn, procFullName, true);
-  }
-
-  private boolean isProcedure(final Connection conn, final String procFullName)
-      throws SQLException {
-    return hasMetadataMatch(conn, procFullName, false);
-  }
-
-  private boolean hasMetadataMatch(
-      final Connection conn, final String procFullName, final boolean functionSearch)
-      throws SQLException {
-    final int lastDot = procFullName.lastIndexOf('.');
-    final String schema = lastDot > 0 ? procFullName.substring(0, lastDot) : null;
-    final String name = lastDot > 0 ? procFullName.substring(lastDot + 1) : procFullName;
-
-    final DatabaseMetaData metaData = conn.getMetaData();
-    final String catalog = conn.getCatalog();
-    final String connSchema = safeSchema(conn);
-
-    if (hasObject(metaData, catalog, schema, name, functionSearch)
-        || hasObject(metaData, catalog, connSchema, name, functionSearch)
-        || hasObject(metaData, catalog, null, name, functionSearch)) {
-      return true;
-    }
-
-    final String upper = name.toUpperCase(Locale.ROOT);
-    if (!upper.equals(name)
-        && (hasObject(metaData, catalog, schema, upper, functionSearch)
-            || hasObject(metaData, catalog, connSchema, upper, functionSearch)
-            || hasObject(metaData, catalog, null, upper, functionSearch))) {
-      return true;
-    }
-
-    final String lower = name.toLowerCase(Locale.ROOT);
-    return !lower.equals(name)
-        && (hasObject(metaData, catalog, schema, lower, functionSearch)
-            || hasObject(metaData, catalog, connSchema, lower, functionSearch)
-            || hasObject(metaData, catalog, null, lower, functionSearch));
-  }
-
-  private boolean hasObject(
-      final DatabaseMetaData metaData,
-      final String catalog,
-      final String schema,
-      final String name,
-      final boolean functionSearch)
-      throws SQLException {
-    if (functionSearch) {
-      try (ResultSet rs = metaData.getFunctions(catalog, schema, name)) {
-        return rs.next();
-      }
-    }
-    try (ResultSet rs = metaData.getProcedures(catalog, schema, name)) {
-      return rs.next();
-    }
-  }
-
-  private String safeSchema(final Connection conn) {
-    try {
-      return conn.getSchema();
-    } catch (SQLException ignored) {
-      return null;
-    }
   }
 
   private Map<String, Object> executeCallableStatement(

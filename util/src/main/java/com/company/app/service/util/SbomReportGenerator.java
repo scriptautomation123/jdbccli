@@ -391,21 +391,21 @@ public final class SbomReportGenerator {
    */
   public static void main(final String[] args) {
     if (args.length == 0) {
-      System.err.println("Usage: java SbomReportGenerator <path-to-sbom.xml>");
-      System.err.println("Example: java SbomReportGenerator target/sbom.xml");
+      System.err.println("Usage: java SbomReportGenerator <path-to-sbom.xml>"); // NOSONAR
+      System.err.println("Example: java SbomReportGenerator target/sbom.xml"); // NOSONAR
       System.exit(1);
     }
 
     final Path sbomPath = Path.of(args[0]);
     if (!Files.exists(sbomPath)) {
-      System.err.println("Error: File not found: " + sbomPath);
+      System.err.println("Error: File not found: " + sbomPath); // NOSONAR
       System.exit(1);
     }
 
     try {
-      generateReport(sbomPath, System.out);
+      generateReport(sbomPath, System.out); // NOSONAR
     } catch (IOException e) {
-      System.err.println("Error reading SBOM: " + e.getMessage());
+      System.err.println("Error reading SBOM: " + e.getMessage()); // NOSONAR
       System.exit(1);
     }
   }

@@ -9,6 +9,21 @@ databases:
         servers: oid1puser.someplace.com,oid2puser.someplace.com,oid3puser.someplace.com
         context: cn=oracleContext,dc=somecompany,dc=com
         port: 389
+  postgresql:
+    connection-string:
+      jdbc:
+        template: jdbc:postgresql://%s:%d/%s
+        port: 5432
+  mysql:
+    connection-string:
+      jdbc:
+        template: jdbc:mysql://%s:%d/%s
+        port: 3306
+  sqlserver:
+    connection-string:
+      jdbc:
+        template: jdbc:sqlserver://%s:%d;databaseName=%s
+        port: 1433
   h2:
     connection-string:
       jdbc-thin:

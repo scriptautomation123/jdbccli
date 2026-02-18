@@ -19,7 +19,7 @@ A command-line tool and library for executing SQL queries and stored procedures 
 │  • queryForList()            │  • executeSql()                           │
 │  • queryForObject()          │  • executeScript()                        │
 │  Returns: List<T>            │  • executeProcedure()                     │
-│  Performance: 18.5x faster   │  Returns: ExecutionResult (String)        │
+│  Performance: optimized      │  Returns: ExecutionResult (String)        │
 └──────────────┬───────────────┴──────────────┬───────────────────────────┘
                │                              │
                ▼                              ▼
@@ -49,7 +49,7 @@ A command-line tool and library for executing SQL queries and stored procedures 
 ### Key Components
 
 - **QueryExecutor** - Unified query execution with dual modes (typed/formatted)
-- **ResultSetHandler** - High-performance object mapping (18.5x faster than naive reflection)
+- **ResultSetHandler** - High-performance object mapping (see benchmarks in doccs)
 - **SqlJdbcHelper** - Direct ResultSet → String formatting for CLI display
 - **DatabaseExecutionContext** - Connection lifecycle, password resolution, error handling
 - **ProcedureExecutor** - Stored procedure execution with IN/OUT parameters
@@ -60,7 +60,8 @@ A command-line tool and library for executing SQL queries and stored procedures 
 - Execute stored procedures with input/output parameters
 - Oracle PL/SQL block support (BEGIN...END with `/` delimiter)
 - HashiCorp Vault integration for password resolution
-- Support for Oracle, PostgreSQL, MySQL, H2
+- **Multi-database support:** Oracle, PostgreSQL, MySQL, SQL Server, H2
+- **Parameterized integration testing** across all databases via `-Ddatabase` flag
 
 ## Quick Start
 
@@ -73,20 +74,34 @@ cd docker && docker compose down -v && docker compose up -d && cd ..
 
 ### Testcontainers prerequisites (integration tests)
 
-Integration tests use Testcontainers (PostgreSQL) and require a reachable Docker daemon.
+Integration tests use Testcontainers and support multiple databases (PostgreSQL, MySQL, SQL Server, Oracle) parameterized via `-Ddatabase`:
 
 ```bash
-# If Docker API version negotiation fails in this environment
-mvn -Dapi.version=1.52 test
+# PostgreSQL (default, fastest startup)
+mvn test -Dapi.version=1.52 \
+  -Dvault.config=/workspaces/jdbccli/cli/src/main/resources/application.yaml \
+  -Djdbccli.password=your_password
 
-# If config templates are required (YamlConfig reads filesystem only)
-mvn -Dvault.config=/path/to/application.yaml test
+# MySQL
+mvn test -Ddatabase=mysql -Dapi.version=1.52 \
+  -Dvault.config=/workspaces/jdbccli/cli/src/main/resources/application.yaml \
+  -Djdbccli.password=your_password
 
-# Avoid blocking password prompts in non-interactive runs
-mvn -Djdbccli.password=your_password test
-# or
-JDBCCLI_PASSWORD=your_password mvn test
+# SQL Server
+mvn test -Ddatabase=sqlserver -Dapi.version=1.52 \
+  -Dvault.config=/workspaces/jdbccli/cli/src/main/resources/application.yaml \
+  -Djdbccli.password=your_password
+
+# Oracle (longer startup ~2-3 minutes on first run)
+mvn test -Ddatabase=oracle -Dapi.version=1.52 \
+  -Dvault.config=/workspaces/jdbccli/cli/src/main/resources/application.yaml \
+  -Djdbccli.password=your_password
 ```
+
+**Requirements:**
+- Docker daemon must be reachable
+- Docker API version ≥1.44 (use `-Dapi.version=1.52` if negotiation fails)
+- See [COMPREHENSIVE_TEST_REPORT.md](doccs/COMPREHENSIVE_TEST_REPORT.md) for detailed testing instructions
 
 ### Interactive Mode
 
@@ -224,7 +239,33 @@ try (Connection conn = DriverManager.getConnection("jdbc:duckdb:")) {
 
 ## CLI Usage Examples
 
-### 0. Execute basic SQL query
+### Multi-Database Support
+
+The CLI supports multiple database types with consistent syntax:
+
+```bash
+# Oracle
+jdbccli exec-sql "SELECT * FROM employees" \
+  --type oracle --database localhost:1521:xe --user hr
+
+# PostgreSQL
+jdbccli exec-sql "SELECT * FROM employees LIMIT 10" \
+  --type postgresql --database localhost:5432:mydb --user postgres
+
+# MySQL
+jdbccli exec-sql "SELECT * FROM employees LIMIT 10" \
+  --type mysql --database localhost:3306:mydb --user root
+
+# SQL Server
+jdbccli exec-sql "SELECT TOP 10 * FROM employees" \
+  --type sqlserver --database localhost:1433:mydb --user sa
+
+# H2 (in-memory testing)
+jdbccli exec-sql "SELECT * FROM employees" \
+  --type h2 --database testdb --user sa
+```
+
+### 0. Execute basic SQL query (Oracle)
 
 ```bash
 cd ~/code/scriptautomation123/jdbccli/package-helper/target/dist/cli-1.0.0 &&\
@@ -408,6 +449,7 @@ jdbccli/
 
 ## Architecture Highlights
 
+- **ConnectionStringGenerator** - Strategy pattern for multi-database support (Oracle JDBC/LDAP, PostgreSQL, MySQL, SQL Server, H2)
 - **ScriptParser** - Handles Oracle PL/SQL blocks (BEGIN...END with `/`)
 - **ResultFormatter** - Abstraction point for future Arrow Flight SQL
 - **DatabaseExecutionContext** - Composition over inheritance for DB operations

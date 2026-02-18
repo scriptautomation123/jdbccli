@@ -3,7 +3,6 @@ package com.company.app.service.auth;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -17,6 +16,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullAndEmptySource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.MockedConstruction;
 import org.mockito.Mockito;
 
@@ -27,6 +29,8 @@ import com.company.app.service.util.VaultClient;
  * strategies.
  */
 @DisplayName("PasswordResolver Tests")
+@SuppressWarnings(
+    "PMD.UnusedLocalVariable") // False positive: try-with-resources variables are used
 class PasswordResolverTest {
 
   private static final String TEST_USER = "testuser";
@@ -43,7 +47,9 @@ class PasswordResolverTest {
 
   @BeforeEach
   void setUp() {
-    passwordPrompter = mock(Supplier.class);
+    @SuppressWarnings("unchecked")
+    Supplier<String> mockedPrompter = mock(Supplier.class);
+    passwordPrompter = mockedPrompter;
     resolver = new PasswordResolver(passwordPrompter);
   }
 
@@ -54,9 +60,9 @@ class PasswordResolverTest {
     @Test
     @DisplayName("should create resolver with password prompter")
     void shouldCreateResolverWithPrompter() {
-      PasswordResolver resolver = new PasswordResolver(() -> "password");
+      PasswordResolver testResolver = new PasswordResolver(() -> "password");
 
-      assertThat(resolver).isNotNull();
+      assertThat(testResolver).isNotNull();
     }
 
     @Test
@@ -100,9 +106,11 @@ class PasswordResolverTest {
       }
     }
 
-    @Test
-    @DisplayName("should handle null password from direct vault params")
-    void shouldHandleNullPasswordFromDirectVault() {
+    @ParameterizedTest
+    @NullAndEmptySource
+    @ValueSource(strings = {"   "})
+    @DisplayName("should handle null, empty, or blank password from direct vault params")
+    void shouldHandleInvalidPasswordFromDirectVault(String invalidPassword) {
       PasswordRequest request =
           new PasswordRequest(
               TEST_USER, TEST_DATABASE, TEST_VAULT_URL, TEST_ROLE_ID, TEST_SECRET_ID, TEST_AIT);
@@ -118,61 +126,7 @@ class PasswordResolverTest {
                         anyString(),
                         anyString(),
                         anyString()))
-                    .thenReturn(null);
-              })) {
-
-        Optional<String> result = resolver.resolvePassword(request);
-
-        assertThat(result).isEmpty();
-      }
-    }
-
-    @Test
-    @DisplayName("should handle empty password from direct vault params")
-    void shouldHandleEmptyPasswordFromDirectVault() {
-      PasswordRequest request =
-          new PasswordRequest(
-              TEST_USER, TEST_DATABASE, TEST_VAULT_URL, TEST_ROLE_ID, TEST_SECRET_ID, TEST_AIT);
-
-      try (MockedConstruction<VaultClient> mocked =
-          Mockito.mockConstruction(
-              VaultClient.class,
-              (mock, context) -> {
-                when(mock.fetchOraclePassword(
-                        anyString(),
-                        anyString(),
-                        anyString(),
-                        anyString(),
-                        anyString(),
-                        anyString()))
-                    .thenReturn("");
-              })) {
-
-        Optional<String> result = resolver.resolvePassword(request);
-
-        assertThat(result).isEmpty();
-      }
-    }
-
-    @Test
-    @DisplayName("should handle blank password from direct vault params")
-    void shouldHandleBlankPasswordFromDirectVault() {
-      PasswordRequest request =
-          new PasswordRequest(
-              TEST_USER, TEST_DATABASE, TEST_VAULT_URL, TEST_ROLE_ID, TEST_SECRET_ID, TEST_AIT);
-
-      try (MockedConstruction<VaultClient> mocked =
-          Mockito.mockConstruction(
-              VaultClient.class,
-              (mock, context) -> {
-                when(mock.fetchOraclePassword(
-                        anyString(),
-                        anyString(),
-                        anyString(),
-                        anyString(),
-                        anyString(),
-                        anyString()))
-                    .thenReturn("   ");
+                    .thenReturn(invalidPassword);
               })) {
 
         Optional<String> result = resolver.resolvePassword(request);
@@ -418,7 +372,7 @@ class PasswordResolverTest {
         assertThat(result).isPresent().contains(TEST_PASSWORD);
         // Verify lookup was never called
         VaultClient vaultClient = mocked.constructed().get(0);
-        verify(vaultClient, never()).fetchOraclePassword(eq(TEST_USER), eq(TEST_DATABASE));
+        verify(vaultClient, never()).fetchOraclePassword(TEST_USER, TEST_DATABASE);
       }
     }
 

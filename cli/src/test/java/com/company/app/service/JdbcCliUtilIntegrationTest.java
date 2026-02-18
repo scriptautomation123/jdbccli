@@ -31,7 +31,8 @@ class JdbcCliUtilIntegrationTest {
 
   @Container
   @SuppressWarnings("resource") // Testcontainers manages container lifecycle
-  private static final PostgreSQLContainer postgres = new PostgreSQLContainer("postgres:15-alpine");
+  private static final PostgreSQLContainer<?> postgres =
+      new PostgreSQLContainer<>("postgres:15-alpine");
 
   static {
     postgres.withDatabaseName("testdb");
@@ -99,8 +100,9 @@ class JdbcCliUtilIntegrationTest {
 
       assertThat(exitCode).isZero();
       String output = outContent.toString();
-      assertThat(output).contains("Usage:", "jdbccli", "Commands:");
-      assertThat(output).containsAnyOf("exec-sql", "exec-proc");
+      assertThat(output)
+          .contains("Usage:", "jdbccli", "Commands:")
+          .containsAnyOf("exec-sql", "exec-proc");
     }
 
     @Test
@@ -219,8 +221,7 @@ class JdbcCliUtilIntegrationTest {
 
       assertThat(exitCode).isZero();
       String output = outContent.toString();
-      assertThat(output).contains("Item1");
-      assertThat(output).doesNotContain("Item2");
+      assertThat(output).contains("Item1").doesNotContain("Item2");
     }
   }
 

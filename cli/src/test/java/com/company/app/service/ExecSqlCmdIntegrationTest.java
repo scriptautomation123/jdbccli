@@ -33,7 +33,8 @@ class ExecSqlCmdIntegrationTest {
 
   @Container
   @SuppressWarnings("resource") // Testcontainers manages container lifecycle
-  private static final PostgreSQLContainer postgres = new PostgreSQLContainer("postgres:15-alpine");
+  private static final PostgreSQLContainer<?> postgres =
+      new PostgreSQLContainer<>("postgres:15-alpine");
 
   static {
     postgres.withDatabaseName("testdb");
@@ -142,8 +143,7 @@ INSERT INTO employees (first_name, last_name, email, department, salary, hire_da
 
       assertThat(exitCode).isZero();
       String output = outContent.toString();
-      assertThat(output).contains("Alice", "Bob", "Charlie");
-      assertThat(output).contains("alice@example.com");
+      assertThat(output).contains("Alice", "Bob", "Charlie").contains("alice@example.com");
     }
 
     @Test
@@ -164,8 +164,7 @@ INSERT INTO employees (first_name, last_name, email, department, salary, hire_da
 
       assertThat(exitCode).isZero();
       String output = outContent.toString();
-      assertThat(output).contains("Alice", "Charlie");
-      assertThat(output).doesNotContain("Bob");
+      assertThat(output).contains("Alice", "Charlie").doesNotContain("Bob");
     }
 
     @Test
@@ -235,8 +234,7 @@ INSERT INTO employees (first_name, last_name, email, department, salary, hire_da
 
       assertThat(exitCode).isZero();
       String output = outContent.toString();
-      assertThat(output).contains("Alice", "Smith");
-      assertThat(output).doesNotContain("Bob", "Charlie");
+      assertThat(output).contains("Alice", "Smith").doesNotContain("Bob", "Charlie");
     }
 
     @Test
@@ -259,8 +257,7 @@ INSERT INTO employees (first_name, last_name, email, department, salary, hire_da
 
       assertThat(exitCode).isZero();
       String output = outContent.toString();
-      assertThat(output).contains("Charlie");
-      assertThat(output).doesNotContain("Alice", "Bob");
+      assertThat(output).contains("Charlie").doesNotContain("Alice", "Bob");
     }
   }
 

@@ -31,7 +31,8 @@ class ExecProcedureCmdIntegrationTest {
 
   @Container
   @SuppressWarnings("resource") // Testcontainers manages container lifecycle
-  private static final PostgreSQLContainer postgres = new PostgreSQLContainer("postgres:15-alpine");
+  private static final PostgreSQLContainer<?> postgres =
+      new PostgreSQLContainer<>("postgres:15-alpine");
 
   static {
     postgres.withDatabaseName("testdb");

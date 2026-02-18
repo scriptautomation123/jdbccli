@@ -219,7 +219,7 @@ class PasswordRequestTest {
       PasswordRequest request =
           new PasswordRequest(TEST_USER, TEST_DATABASE, null, null, null, null);
 
-      assertThatThrownBy(() -> request.getVaultUrl())
+      assertThatThrownBy(request::getVaultUrl)
           .isInstanceOf(IllegalStateException.class)
           .hasMessageContaining("Vault parameters not available");
     }
@@ -240,7 +240,7 @@ class PasswordRequestTest {
       PasswordRequest request =
           new PasswordRequest(TEST_USER, TEST_DATABASE, null, null, null, null);
 
-      assertThatThrownBy(() -> request.getRoleId())
+      assertThatThrownBy(request::getRoleId)
           .isInstanceOf(IllegalStateException.class)
           .hasMessageContaining("Vault parameters not available");
     }
@@ -261,7 +261,7 @@ class PasswordRequestTest {
       PasswordRequest request =
           new PasswordRequest(TEST_USER, TEST_DATABASE, null, null, null, null);
 
-      assertThatThrownBy(() -> request.getSecretId())
+      assertThatThrownBy(request::getSecretId)
           .isInstanceOf(IllegalStateException.class)
           .hasMessageContaining("Vault parameters not available");
     }
@@ -282,7 +282,7 @@ class PasswordRequestTest {
       PasswordRequest request =
           new PasswordRequest(TEST_USER, TEST_DATABASE, null, null, null, null);
 
-      assertThatThrownBy(() -> request.getAit())
+      assertThatThrownBy(request::getAit)
           .isInstanceOf(IllegalStateException.class)
           .hasMessageContaining("Vault parameters not available");
     }
@@ -302,8 +302,7 @@ class PasswordRequestTest {
           new PasswordRequest(
               TEST_USER, TEST_DATABASE, TEST_VAULT_URL, TEST_ROLE_ID, TEST_SECRET_ID, TEST_AIT);
 
-      assertThat(request1).isEqualTo(request2);
-      assertThat(request1.hashCode()).isEqualTo(request2.hashCode());
+      assertThat(request1).isEqualTo(request2).hasSameHashCodeAs(request2);
     }
 
     @Test
@@ -341,9 +340,7 @@ class PasswordRequestTest {
 
       String toString = request.toString();
 
-      assertThat(toString).contains("PasswordRequest");
-      assertThat(toString).contains(TEST_USER);
-      assertThat(toString).contains(TEST_DATABASE);
+      assertThat(toString).contains("PasswordRequest").contains(TEST_USER).contains(TEST_DATABASE);
     }
   }
 
