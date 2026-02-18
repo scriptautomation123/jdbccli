@@ -1,5 +1,12 @@
 # JDBC CLI
 
+Copy to User Keybindings (Recommended)
+
+Press Ctrl+Shift+P (Command Palette)
+Type "Preferences: Open Keyboard Shortcuts (JSON)"
+Copy the contents from keybindings.json into your user keybindings file
+
+
 A command-line tool and library for executing SQL queries and stored procedures against various databases with HashiCorp Vault integration for secure password management.
 
 ## Architecture Overview
