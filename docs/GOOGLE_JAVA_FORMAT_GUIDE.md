@@ -46,21 +46,25 @@ This project uses Google Java Format via the Spotless Maven Plugin to keep Java 
 ## Quick Commands
 
 ### Apply formatting to all files
+
 ```bash
 mvn spotless:apply
 ```
 
 ### Check formatting compliance (without modifying)
+
 ```bash
 mvn spotless:check
 ```
 
 ### Format and skip untracked files (faster for incremental work)
+
 ```bash
 mvn spotless:apply -DspotlessFollow=true
 ```
 
 ### Format specific module only
+
 ```bash
 mvn -pl util spotless:apply
 mvn -pl database spotless:apply
@@ -83,6 +87,7 @@ mvn -pl cli spotless:apply
 1. **Install Extension:** [Google Java Format](https://marketplace.visualstudio.com/items?itemName=joseandrade.google-java-format-for-vs-code)
 
 2. **Settings (settings.json):**
+
 ```json
 {
   "[java]": {
@@ -143,6 +148,7 @@ If you need to customize the formatting rules, edit the `pom.xml` file:
 ```
 
 After changing the configuration, run:
+
 ```bash
 mvn spotless:apply
 ```
@@ -152,13 +158,16 @@ mvn spotless:apply
 ## Styles Available
 
 ### GOOGLE (Default)
+
 - 2-space indentation
 - 100-character line limit
 
 ### AOSP
+
 - 4-space indentation
 
 Change in pom.xml:
+
 ```xml
 <style>AOSP</style>
 ```
@@ -168,7 +177,9 @@ Change in pom.xml:
 ## Troubleshooting
 
 ### Issue: "MVN spotless:apply fails"
+
 **Solution:**
+
 ```bash
 # Clean and rebuild
 mvn clean install
@@ -178,25 +189,32 @@ mvn spotless:apply
 ```
 
 ### Issue: "Too many files formatted, want to avoid"
+
 **Solution:** Format only modified files:
+
 ```bash
 mvn spotless:apply -DspotlessFollow=true
 ```
 
 ### Issue: "IDE formatting differs from spotless"
+
 **Solution:**
+
 1. Ensure IDE has Google Java Format extension installed
 2. Run `mvn spotless:apply` to sync
 3. Check IDE settings match Google style
 
 ### Issue: "Import order keeps changing"
+
 **Solution:** The import order configuration in pom.xml is:
+
 ```xml
 <order>java,javax,org,com</order>
 <wildcardsLast>true</wildcardsLast>
 ```
 
 This ensures imports are organized as:
+
 1. `java.*`
 2. `javax.*`
 3. `org.*`

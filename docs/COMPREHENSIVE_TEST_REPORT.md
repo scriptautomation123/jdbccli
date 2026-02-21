@@ -46,12 +46,12 @@ mvn test -pl database -Dtest=JdbcCliLibraryIntegrationTest -Ddatabase=oracle \
 
 Each database has database-specific SQL schema and type handling:
 
-| Database   | Schema File           | Boolean Handling | Container              |
-| ---------- | --------------------- | ---------------- | ---------------------- |
-| PostgreSQL | schema-postgres.sql   | true/false       | postgres:15-alpine     |
-| MySQL      | schema-mysql.sql      | 1/0              | mysql:8.0              |
-| SQL Server | schema-sqlserver.sql  | 1/0 (BIT)        | mssql/server:2022      |
-| Oracle     | schema-oracle.sql     | 'Y'/'N'          | oracle-xe:21-slim      |
+| Database   | Schema File          | Boolean Handling | Container          |
+| ---------- | -------------------- | ---------------- | ------------------ |
+| PostgreSQL | schema-postgres.sql  | true/false       | postgres:15-alpine |
+| MySQL      | schema-mysql.sql     | 1/0              | mysql:8.0          |
+| SQL Server | schema-sqlserver.sql | 1/0 (BIT)        | mssql/server:2022  |
+| Oracle     | schema-oracle.sql    | 'Y'/'N'          | oracle-xe:21-slim  |
 
 ## How to Run
 
