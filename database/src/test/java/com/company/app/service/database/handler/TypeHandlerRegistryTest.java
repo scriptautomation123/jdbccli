@@ -16,12 +16,17 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
+import com.company.app.service.database.typedapi.TypeHandler;
+import com.company.app.service.database.typedapi.TypeHandlerRegistry;
+
 /**
- * Unit tests for TypeHandlerRegistry singleton. Tests handler registration, retrieval, and all
- * default type handlers. Mock ResultSet objects don't require closing as they're not real database
+ * Unit tests for TypeHandlerRegistry singleton. Tests handler registration,
+ * retrieval, and all
+ * default type handlers. Mock ResultSet objects don't require closing as
+ * they're not real database
  * resources.
  */
-@SuppressWarnings({"resource", "PMD.CloseResource"})
+@SuppressWarnings({ "resource", "PMD.CloseResource" })
 @DisplayName("TypeHandlerRegistry")
 class TypeHandlerRegistryTest {
 
@@ -49,7 +54,8 @@ class TypeHandlerRegistryTest {
     @DisplayName("should register and retrieve custom handler")
     void shouldRegisterCustomHandler() {
       // Test with a custom class to avoid polluting the singleton registry
-      class TestCustomType {}
+      class TestCustomType {
+      }
 
       // Given
       TypeHandler<TestCustomType> customHandler = (rs, col) -> new TestCustomType();
@@ -338,18 +344,18 @@ class TypeHandlerRegistryTest {
     @DisplayName("should handle concurrent handler registration")
     void shouldHandleConcurrentRegistration() throws InterruptedException {
       // Test with a custom class to avoid polluting the singleton registry
-      class CustomType {}
+      class CustomType {
+      }
 
       int threadCount = 10;
       Thread[] threads = new Thread[threadCount];
 
       for (int i = 0; i < threadCount; i++) {
-        threads[i] =
-            new Thread(
-                () -> {
-                  TypeHandler<CustomType> handler = (rs, col) -> new CustomType();
-                  registry.register(CustomType.class, handler);
-                });
+        threads[i] = new Thread(
+            () -> {
+              TypeHandler<CustomType> handler = (rs, col) -> new CustomType();
+              registry.register(CustomType.class, handler);
+            });
         threads[i].start();
       }
 

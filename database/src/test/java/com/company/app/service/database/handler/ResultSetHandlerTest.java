@@ -7,20 +7,30 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 
+import com.company.app.service.database.typedapi.DefaultResultSetHandlerFactory;
+import com.company.app.service.database.typedapi.ResultSetHandler;
+import com.company.app.service.database.typedapi.TypeHandlerRegistry;
+import com.company.app.service.database.typedapi.UnderscoreToCamelCase;
+
 /**
  * Unit tests for the ResultSetHandler optimization framework.
  *
- * <p>These tests verify the functionality and issue fixes described in the package documentation:
+ * <p>
+ * These tests verify the functionality and issue fixes described in the package
+ * documentation:
  *
  * <ul>
- *   <li>Bounded LRU cache in DefaultResultSetHandlerFactory
- *   <li>Null key validation in TypeHandlerRegistry
- *   <li>Proper exception handling in TypeHandlerPropertyAccessor
- *   <li>UnderscoreToCamelCase conversion
+ * <li>Bounded LRU cache in DefaultResultSetHandlerFactory
+ * <li>Null key validation in TypeHandlerRegistry
+ * <li>Proper exception handling in TypeHandlerPropertyAccessor
+ * <li>UnderscoreToCamelCase conversion
  * </ul>
  *
- * <p><strong>Note:</strong> This class uses a main() method for demonstration purposes. In a
- * production environment, use a proper testing framework like JUnit. The manual test approach is
+ * <p>
+ * <strong>Note:</strong> This class uses a main() method for demonstration
+ * purposes. In a
+ * production environment, use a proper testing framework like JUnit. The manual
+ * test approach is
  * intentional for this demo/benchmark project.
  */
 public final class ResultSetHandlerTest {
@@ -130,7 +140,8 @@ public final class ResultSetHandlerTest {
   }
 
   /**
-   * Test: TypeHandlerRegistry rejects null keys. Issue Fixed: Null key registration was previously
+   * Test: TypeHandlerRegistry rejects null keys. Issue Fixed: Null key
+   * registration was previously
    * allowed.
    */
   private static boolean testTypeHandlerRegistryNullValidation() {
@@ -203,13 +214,13 @@ public final class ResultSetHandlerTest {
       try (Statement stmt = conn.createStatement()) {
         stmt.execute(
             """
-            CREATE TABLE test_users (
-                id INTEGER,
-                user_name VARCHAR(50),
-                first_name VARCHAR(50),
-                last_name VARCHAR(50)
-            )
-            """);
+                CREATE TABLE test_users (
+                    id INTEGER,
+                    user_name VARCHAR(50),
+                    first_name VARCHAR(50),
+                    last_name VARCHAR(50)
+                )
+                """);
         stmt.execute("INSERT INTO test_users VALUES (1, 'jdoe', 'John', 'Doe')");
       }
 
@@ -217,8 +228,8 @@ public final class ResultSetHandlerTest {
       try (PreparedStatement pstmt = conn.prepareStatement("SELECT * FROM test_users");
           ResultSet rs = pstmt.executeQuery()) {
 
-        ResultSetHandler<TestUser> handler =
-            DefaultResultSetHandlerFactory.getHandler(TestUser.class, rs.getMetaData());
+        ResultSetHandler<TestUser> handler = DefaultResultSetHandlerFactory.getHandler(TestUser.class,
+            rs.getMetaData());
 
         if (!rs.next()) {
           System.out.println("  ✗ FAILED: No data in result set");
@@ -323,8 +334,7 @@ public final class ResultSetHandlerTest {
       DefaultResultSetHandlerFactory.clearCache();
 
       int maxSize = DefaultResultSetHandlerFactory.getMaxCacheSize();
-      DefaultResultSetHandlerFactory.CacheStats stats =
-          DefaultResultSetHandlerFactory.getCacheStats();
+      DefaultResultSetHandlerFactory.CacheStats stats = DefaultResultSetHandlerFactory.getCacheStats();
 
       if (maxSize == 1000 && stats.currentSize() == 0) {
         System.out.println(
@@ -359,8 +369,8 @@ public final class ResultSetHandlerTest {
       try (PreparedStatement pstmt = conn.prepareStatement("SELECT * FROM null_test");
           ResultSet rs = pstmt.executeQuery()) {
 
-        ResultSetHandler<TestUser> handler =
-            DefaultResultSetHandlerFactory.getHandler(TestUser.class, rs.getMetaData());
+        ResultSetHandler<TestUser> handler = DefaultResultSetHandlerFactory.getHandler(TestUser.class,
+            rs.getMetaData());
 
         if (!rs.next()) {
           System.out.println("  ✗ FAILED: No data in result set");

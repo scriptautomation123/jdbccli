@@ -1,4 +1,4 @@
-package com.company.app.service.database.handler;
+package com.company.app.service.database.typedapi;
 
 import java.lang.reflect.Method;
 import java.sql.ResultSet;
@@ -8,14 +8,21 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 /**
- * Property accessor implementation that uses a {@link TypeHandler} for type conversion.
+ * Property accessor implementation that uses a {@link TypeHandler} for type
+ * conversion.
  *
- * <p><strong>Issue Fixed:</strong> This implementation explicitly logs and propagates type
- * conversion errors instead of silently swallowing exceptions. Previously, type conversion errors
+ * <p>
+ * <strong>Issue Fixed:</strong> This implementation explicitly logs and
+ * propagates type
+ * conversion errors instead of silently swallowing exceptions. Previously, type
+ * conversion errors
  * would fall back silently to getObject(), masking bugs.
  *
- * <p><strong>Performance Pattern:</strong> The accessor pre-compiles the setter method reference
- * and type handler, enabling direct invocation without reflection lookup on each access.
+ * <p>
+ * <strong>Performance Pattern:</strong> The accessor pre-compiles the setter
+ * method reference
+ * and type handler, enabling direct invocation without reflection lookup on
+ * each access.
  *
  * @see JdbcPropertyAccessor
  * @see TypeHandler
@@ -33,8 +40,8 @@ final class TypeHandlerPropertyAccessor implements JdbcPropertyAccessor {
    * Creates a new property accessor.
    *
    * @param propertyName the property name
-   * @param setter the setter method
-   * @param handler the type handler for conversion
+   * @param setter       the setter method
+   * @param handler      the type handler for conversion
    */
   TypeHandlerPropertyAccessor(String propertyName, Method setter, TypeHandler<?> handler) {
     this.propertyName = propertyName;
@@ -46,14 +53,17 @@ final class TypeHandlerPropertyAccessor implements JdbcPropertyAccessor {
   /**
    * Sets the property value on the target object.
    *
-   * <p><strong>Issue Fixed:</strong> Type conversion errors are now logged and propagated, not
-   * silently swallowed. This ensures that data type mismatches are caught during development rather
+   * <p>
+   * <strong>Issue Fixed:</strong> Type conversion errors are now logged and
+   * propagated, not
+   * silently swallowed. This ensures that data type mismatches are caught during
+   * development rather
    * than causing subtle bugs in production.
    *
-   * @param target the object to set the property on
-   * @param rs the ResultSet to read from
+   * @param target      the object to set the property on
+   * @param rs          the ResultSet to read from
    * @param columnIndex the 1-based column index
-   * @throws SQLException if a database access error occurs
+   * @throws SQLException                 if a database access error occurs
    * @throws ReflectiveOperationException if the setter invocation fails
    */
   @Override

@@ -1,4 +1,4 @@
-package com.company.app.service.database.handler;
+package com.company.app.service.database.typedapi;
 
 import java.math.BigDecimal;
 import java.sql.ResultSet;
@@ -14,24 +14,33 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * Singleton registry for {@link TypeHandler} instances.
  *
- * <p><strong>Optimization Pattern:</strong> This registry is a shared singleton that caches
- * TypeHandlers for common types, avoiding repeated handler creation. The registry is initialized
+ * <p>
+ * <strong>Optimization Pattern:</strong> This registry is a shared singleton
+ * that caches
+ * TypeHandlers for common types, avoiding repeated handler creation. The
+ * registry is initialized
  * with handlers for all common JDBC types.
  *
- * <p><strong>Singleton Justification:</strong> The singleton pattern is appropriate here because:
+ * <p>
+ * <strong>Singleton Justification:</strong> The singleton pattern is
+ * appropriate here because:
  *
  * <ul>
- *   <li>Type handlers are stateless and immutable
- *   <li>Shared registry reduces memory footprint across all JDBC operations
- *   <li>Thread-safe ConcurrentHashMap allows concurrent access
- *   <li>Pre-initialized handlers avoid setup cost on first use
- *   <li>No alternative injection mechanism needed for this utility
+ * <li>Type handlers are stateless and immutable
+ * <li>Shared registry reduces memory footprint across all JDBC operations
+ * <li>Thread-safe ConcurrentHashMap allows concurrent access
+ * <li>Pre-initialized handlers avoid setup cost on first use
+ * <li>No alternative injection mechanism needed for this utility
  * </ul>
  *
- * <p><strong>Issue Fixed:</strong> Null key registration is now validated and rejected with a clear
+ * <p>
+ * <strong>Issue Fixed:</strong> Null key registration is now validated and
+ * rejected with a clear
  * error message.
  *
- * <p><strong>Thread Safety:</strong> The registry uses a ConcurrentHashMap and is safe for
+ * <p>
+ * <strong>Thread Safety:</strong> The registry uses a ConcurrentHashMap and is
+ * safe for
  * concurrent access.
  *
  * @see TypeHandler
@@ -61,11 +70,13 @@ public final class TypeHandlerRegistry {
   /**
    * Registers a type handler for the given class.
    *
-   * <p><strong>Issue Fixed:</strong> Null keys are explicitly rejected to prevent subtle bugs.
+   * <p>
+   * <strong>Issue Fixed:</strong> Null keys are explicitly rejected to prevent
+   * subtle bugs.
    *
-   * @param type the target type class (must not be null)
+   * @param type    the target type class (must not be null)
    * @param handler the handler to register (must not be null)
-   * @param <T> the target type
+   * @param <T>     the target type
    * @throws NullPointerException if type or handler is null
    */
   public <T> void register(Class<T> type, TypeHandler<T> handler) {
@@ -78,7 +89,7 @@ public final class TypeHandlerRegistry {
    * Gets a type handler for the given class.
    *
    * @param type the target type class
-   * @param <T> the target type
+   * @param <T>  the target type
    * @return the registered handler, or null if not found
    */
   @SuppressWarnings("unchecked")

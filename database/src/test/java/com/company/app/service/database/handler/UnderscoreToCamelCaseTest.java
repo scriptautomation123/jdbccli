@@ -8,7 +8,12 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
-/** Unit tests for UnderscoreToCamelCase utility. Tests single-pass O(n) conversion algorithm. */
+import com.company.app.service.database.typedapi.UnderscoreToCamelCase;
+
+/**
+ * Unit tests for UnderscoreToCamelCase utility. Tests single-pass O(n)
+ * conversion algorithm.
+ */
 @DisplayName("UnderscoreToCamelCase")
 class UnderscoreToCamelCaseTest {
 
@@ -19,14 +24,14 @@ class UnderscoreToCamelCaseTest {
     @ParameterizedTest
     @DisplayName("should convert common database column names")
     @CsvSource({
-      "user_name, userName",
-      "first_name, firstName",
-      "last_name, lastName",
-      "email_address, emailAddress",
-      "created_at, createdAt",
-      "updated_at, updatedAt",
-      "is_active, isActive",
-      "employee_id, employeeId"
+        "user_name, userName",
+        "first_name, firstName",
+        "last_name, lastName",
+        "email_address, emailAddress",
+        "created_at, createdAt",
+        "updated_at, updatedAt",
+        "is_active, isActive",
+        "employee_id, employeeId"
     })
     void shouldConvertCommonNames(String input, String expected) {
       assertThat(UnderscoreToCamelCase.convert(input)).isEqualTo(expected);
@@ -35,10 +40,10 @@ class UnderscoreToCamelCaseTest {
     @ParameterizedTest
     @DisplayName("should handle UPPER_CASE database columns")
     @CsvSource({
-      "USER_NAME, userName",
-      "FIRST_NAME, firstName",
-      "EMPLOYEE_ID, employeeId",
-      "IS_ACTIVE, isActive"
+        "USER_NAME, userName",
+        "FIRST_NAME, firstName",
+        "EMPLOYEE_ID, employeeId",
+        "IS_ACTIVE, isActive"
     })
     void shouldConvertUpperCase(String input, String expected) {
       assertThat(UnderscoreToCamelCase.convert(input)).isEqualTo(expected);
@@ -46,7 +51,7 @@ class UnderscoreToCamelCaseTest {
 
     @ParameterizedTest
     @DisplayName("should handle Mixed_Case columns")
-    @CsvSource({"User_Name, userName", "First_Name, firstName", "Employee_ID, employeeId"})
+    @CsvSource({ "User_Name, userName", "First_Name, firstName", "Employee_ID, employeeId" })
     void shouldConvertMixedCase(String input, String expected) {
       assertThat(UnderscoreToCamelCase.convert(input)).isEqualTo(expected);
     }
