@@ -1,4 +1,4 @@
-package com.company.app.service.database;
+package com.company.app.service.database.stringapi;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;

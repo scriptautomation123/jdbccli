@@ -6,6 +6,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
 
+import com.company.app.service.database.stringapi.SqlJdbcHelper;
 import com.company.app.service.database.typedapi.DefaultResultSetHandlerFactory;
 import com.company.app.service.database.typedapi.ResultSetHandler;
 

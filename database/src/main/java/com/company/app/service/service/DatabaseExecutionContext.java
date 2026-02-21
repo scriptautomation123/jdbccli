@@ -3,6 +3,9 @@ package com.company.app.service.service;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Optional;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import com.company.app.service.auth.PasswordRequest;
 import com.company.app.service.auth.PasswordResolver;
@@ -16,6 +19,10 @@ import com.company.app.service.util.LoggingUtils;
  * Encapsulates the common execution context for database operations. Handles password resolution,
  * connection lifecycle, and execution orchestration. Uses composition and functional interfaces to
  * avoid inheritance coupling.
+ *
+ * <p><strong>Virtual Threads:</strong> Each execution is dispatched onto a virtual thread (Project
+ * Loom, Java 21). JDBC blocking I/O will unmount the carrier thread, improving throughput under
+ * concurrent load without requiring a large thread pool.
  */
 public final class DatabaseExecutionContext {
 
@@ -27,6 +34,9 @@ public final class DatabaseExecutionContext {
 
   /** Status for failed operations */
   private static final String FAILED = "FAILED";
+
+  /** Operation name used in logs for execution events */
+  private static final String EXECUTE_OPERATION = "execute";
 
   /** Password resolver for authentication */
   private final PasswordResolver passwordResolver;
@@ -42,9 +52,12 @@ public final class DatabaseExecutionContext {
   }
 
   /**
-   * Executes a database operation with automatic password resolution and connection management.
-   * This is the primary orchestration method that handles the full lifecycle: 1. Password
-   * resolution 2. Connection creation 3. Operation execution 4. Resource cleanup 5. Error handling
+   * Executes a database operation with automatic password resolution and connection management on a
+   * virtual thread. This is the primary orchestration method that handles the full lifecycle: 1.
+   * Password resolution 2. Connection creation 3. Operation execution 4. Resource cleanup 5. Error
+   * handling
+   *
+   * <p>The operation runs on a virtual thread so JDBC blocking I/O does not pin a platform thread.
    *
    * @param request database request containing authentication and connection parameters
    * @param executor functional interface that executes the actual database operation
@@ -60,6 +73,32 @@ public final class DatabaseExecutionContext {
       return ExecutionResult.failure(1, "[ERROR] Executor cannot be null");
     }
 
+    // Dispatch onto a virtual thread — JDBC blocking I/O unmounts the carrier
+    // thread,
+    // improving throughput without a large platform thread pool.
+    try (ExecutorService vte = Executors.newVirtualThreadPerTaskExecutor()) {
+      return vte.submit(() -> executeOnVirtualThread(request, executor)).get();
+    } catch (ExecutionException e) {
+      Throwable cause = e.getCause();
+      LoggingUtils.logStructuredError(
+          DATABASE_EXECUTION, EXECUTE_OPERATION, FAILED, "Unexpected execution error", cause);
+      return ExecutionResult.failure(
+          1, "[ERROR] Unexpected execution error: " + cause.getMessage());
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return ExecutionResult.failure(1, "[ERROR] Execution interrupted");
+    }
+  }
+
+  /**
+   * Executes the database operation lifecycle on the current (virtual) thread.
+   *
+   * @param request database request
+   * @param executor operation to run with the established connection
+   * @return execution result
+   */
+  private ExecutionResult executeOnVirtualThread(
+      final DbRequest request, final ConnectionExecutor executor) {
     try {
       // Step 1: Resolve password
       final Optional<String> password = resolvePassword(request);
@@ -74,23 +113,22 @@ public final class DatabaseExecutionContext {
             1, "[ERROR] Failed to resolve password for user: " + request.user());
       }
 
-      // Step 2: Create a connection and execute with automatic cleanup
+      // Step 2: Create connection and execute with automatic cleanup
       try (Connection conn = createConnection(request, password.get())) {
-        // Step 3: Delegate to the executor
         return executor.execute(conn);
       }
 
     } catch (SQLException e) {
       LoggingUtils.logStructuredError(
           DATABASE_EXECUTION,
-          "execute",
+          EXECUTE_OPERATION,
           FAILED,
-          "Database operation failed:  " + e.getMessage(),
+          "Database operation failed: " + e.getMessage(),
           e);
       return ExecutionResult.failure(1, "[ERROR] Database operation failed: " + e.getMessage());
 
     } catch (RuntimeException e) {
-      return ExceptionUtils.handleExecutionException(e, DATABASE_EXECUTION, "execute");
+      return ExceptionUtils.handleExecutionException(e, DATABASE_EXECUTION, EXECUTE_OPERATION);
     }
   }
 

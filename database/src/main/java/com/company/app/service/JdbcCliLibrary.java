@@ -1,94 +1,74 @@
 package com.company.app.service;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.function.Supplier;
 
 import com.company.app.service.auth.PasswordResolver;
-import com.company.app.service.database.QueryExecutor;
-import com.company.app.service.domain.model.DatabaseRequest;
 import com.company.app.service.domain.model.ExecutionResult;
-import com.company.app.service.domain.model.ProcedureRequest;
-import com.company.app.service.domain.model.SqlRequest;
 import com.company.app.service.domain.model.VaultConfig;
-import com.company.app.service.service.DatabaseExecutionContext;
 import com.company.app.service.service.ProcedureExecutorService;
 import com.company.app.service.service.SqlExecutorService;
+import com.company.app.service.service.TypedQueryExecutorService;
 
 /**
- * Main entry point for external consumers of the JDBC CLI library. Provides a fluent API for
- * executing SQL statements and scripts with vault authentication.
+ * Thin aggregator and entry point for the JDBC CLI library.
  *
- * <p><strong>Usage Example:</strong>
+ * <p>Access the two distinct API surfaces via:
+ *
+ * <ul>
+ *   <li>{@link #string()} — formatted string output for CLI display
+ *   <li>{@link #typed()} — typed Java-object mapping for programmatic use
+ * </ul>
+ *
+ * <p><strong>Usage example (string API):</strong>
  *
  * <pre>{@code
- * // Create library instance with password supplier
- * JdbcCliLibrary lib = JdbcCliLibrary.create(() -> System.console().readPassword("Password: "));
- *
- * // Execute a SQL statement
- * ExecutionResult result = lib.executeSql(
- *     "postgresql",
- *     "jdbc:postgresql://localhost/mydb",
- *     "admin",
- *     "SELECT * FROM users WHERE id = ?",
- *     List.of(123),
+ * JdbcCliLibrary lib = JdbcCliLibrary.withPassword("secret");
+ * ExecutionResult result = lib.string().runSqlStringApi(
+ *     "postgresql", "jdbc:postgresql://localhost/mydb", "admin",
+ *     "SELECT * FROM employees WHERE dept = ?",
+ *     List.of("Engineering"),
  *     VaultConfig.empty());
- *
- * // Check result
- * if (result.getExitCode() == 0) {
- *   result.formatOutput(System.out);
- * }
+ * result.formatOutput(System.out);
  * }</pre>
  *
- * <p><strong>Using the modern fluent API with records (Java 21+):</strong>
+ * <p><strong>Usage example (typed API):</strong>
  *
  * <pre>{@code
- * ExecutionResult result = library.request("postgresql", "jdbc:postgresql://localhost/mydb", "admin")
- *     .withSql("SELECT * FROM users WHERE status = ?")
- *     .withParams("active")
- *     .withVault(myVaultConfig)
- *     .execute(library);
+ * JdbcCliLibrary lib = JdbcCliLibrary.withPassword("secret");
+ * List<Employee> employees = lib.typed().runSqlTypedApi(
+ *     "postgresql", "jdbc:postgresql://localhost/mydb", "admin",
+ *     "SELECT * FROM employees WHERE dept = ?",
+ *     List.of("Engineering"),
+ *     Employee.class,
+ *     VaultConfig.empty());
  * }</pre>
  *
- * @see SqlExecutorService
- * @see ExecutionResult
+ * @see JdbcCliStringApi
+ * @see JdbcCliTypedApi
  */
 public final class JdbcCliLibrary {
 
-  /** The underlying SQL executor service */
-  private final SqlExecutorService sqlService;
+  private final JdbcCliStringApi stringApi;
+  private final JdbcCliTypedApi typedApi;
 
-  /** The underlying procedure executor service */
-  private final ProcedureExecutorService procedureService;
-
-  /** The password resolver used for authentication */
-  private final PasswordResolver passwordResolver;
-
-  /** Database execution context for typed queries */
-  private final DatabaseExecutionContext executionContext;
-
-  /**
-   * Private constructor - use factory methods to create instances.
-   *
-   * @param passwordResolver password resolver for authentication
-   */
   private JdbcCliLibrary(final PasswordResolver passwordResolver) {
-    this.passwordResolver =
-        Objects.requireNonNull(passwordResolver, "PasswordResolver cannot be null");
-    this.executionContext = new DatabaseExecutionContext(passwordResolver);
-    this.sqlService = new SqlExecutorService(passwordResolver);
-    this.procedureService = new ProcedureExecutorService(passwordResolver);
+    Objects.requireNonNull(passwordResolver, "PasswordResolver cannot be null");
+    this.stringApi =
+        new JdbcCliStringApi(
+            new SqlExecutorService(passwordResolver),
+            new ProcedureExecutorService(passwordResolver));
+    this.typedApi = new JdbcCliTypedApi(new TypedQueryExecutorService(passwordResolver));
   }
 
   /**
-   * Creates a new library instance with a custom password supplier. The supplier will be called
-   * when vault authentication fails or is not configured.
+   * Creates a library instance with a custom password supplier called when vault auth is
+   * unavailable or disabled.
    *
-   * @param passwordSupplier function to supply password when prompted
-   * @return new JdbcCliLibrary instance
-   * @throws NullPointerException if passwordSupplier is null
+   * @param passwordSupplier supplier invoked when a password prompt is needed
+   * @return new {@code JdbcCliLibrary} instance
+   * @throws NullPointerException if {@code passwordSupplier} is null
    */
   public static JdbcCliLibrary create(final Supplier<String> passwordSupplier) {
     Objects.requireNonNull(passwordSupplier, "Password supplier cannot be null");
@@ -96,14 +76,11 @@ public final class JdbcCliLibrary {
   }
 
   /**
-   * Creates a library instance with a static password. Useful for testing, batch operations, or
-   * when password is already known.
+   * Creates a library instance with a static password. Prefer vault configuration for production.
    *
-   * <p><strong>Warning:</strong> Avoid hardcoding passwords in production code. Prefer using {@link
-   * #create(Supplier)} with vault configuration.
-   *
-   * @param password the password to use for authentication
-   * @return new JdbcCliLibrary instance
+   * @param password static password
+   * @return new {@code JdbcCliLibrary} instance
+   * @throws NullPointerException if {@code password} is null
    */
   public static JdbcCliLibrary withPassword(final String password) {
     Objects.requireNonNull(password, "Password cannot be null");
@@ -111,10 +88,10 @@ public final class JdbcCliLibrary {
   }
 
   /**
-   * Creates a library instance with no fallback password supplier. Useful when vault authentication
-   * is always expected to succeed.
+   * Creates a library instance that relies solely on vault authentication. Throws at runtime if a
+   * password prompt would be required.
    *
-   * @return new JdbcCliLibrary instance
+   * @return new {@code JdbcCliLibrary} instance
    */
   public static JdbcCliLibrary withVaultOnly() {
     return create(
@@ -125,332 +102,39 @@ public final class JdbcCliLibrary {
   }
 
   /**
-   * Executes a SQL statement with parameters.
+   * Returns the string-output API surface.
    *
-   * @param dbType database type (oracle, mysql, postgresql, sqlserver, h2)
-   * @param database database connection string (JDBC URL)
-   * @param user database username
-   * @param sql SQL statement to execute (can include ? placeholders)
-   * @param params parameters to bind to SQL placeholders
-   * @param vaultConfig vault configuration for password resolution
-   * @return execution result with exit code and output
+   * <p>Use this for CLI display, scripts, and stored procedure execution where human-readable
+   * formatted output is required.
+   *
+   * @return {@link JdbcCliStringApi} instance
    */
-  public ExecutionResult executeSql(
-      final String dbType,
-      final String database,
-      final String user,
-      final String sql,
-      final List<Object> params,
-      final VaultConfig vaultConfig) {
-
-    final SqlRequest request =
-        new SqlRequest(
-            new DatabaseRequest(dbType, database, user, vaultConfig),
-            Optional.ofNullable(sql),
-            Optional.empty(),
-            params != null ? params : List.of());
-
-    return sqlService.execute(request);
+  public JdbcCliStringApi string() {
+    return stringApi;
   }
 
   /**
-   * Executes a SQL statement without parameters.
+   * Returns the typed-object mapping API surface.
    *
-   * @param dbType database type (oracle, mysql, postgresql, sqlserver, h2)
-   * @param database database connection string (JDBC URL)
-   * @param user database username
-   * @param sql SQL statement to execute
-   * @param vaultConfig vault configuration for password resolution
-   * @return execution result with exit code and output
+   * <p>Use this for programmatic access where results are consumed as Java beans.
+   *
+   * @return {@link JdbcCliTypedApi} instance
    */
-  public ExecutionResult executeSql(
-      final String dbType,
-      final String database,
-      final String user,
-      final String sql,
-      final VaultConfig vaultConfig) {
-
-    return executeSql(dbType, database, user, sql, List.of(), vaultConfig);
+  public JdbcCliTypedApi typed() {
+    return typedApi;
   }
 
   /**
-   * Executes a SQL script file.
-   *
-   * @param dbType database type (oracle, mysql, postgresql, sqlserver, h2)
-   * @param database database connection string (JDBC URL)
-   * @param user database username
-   * @param scriptPath path to the SQL script file
-   * @param vaultConfig vault configuration for password resolution
-   * @return execution result with exit code and output
-   */
-  public ExecutionResult executeScript(
-      final String dbType,
-      final String database,
-      final String user,
-      final String scriptPath,
-      final VaultConfig vaultConfig) {
-
-    final SqlRequest request =
-        new SqlRequest(
-            new DatabaseRequest(dbType, database, user, vaultConfig),
-            Optional.empty(),
-            Optional.ofNullable(scriptPath),
-            List.of());
-
-    return sqlService.execute(request);
-  }
-
-  /**
-   * Executes a stored procedure.
-   *
-   * @param dbType database type (oracle, mysql, postgresql, sqlserver, h2)
-   * @param database database connection string (JDBC URL)
-   * @param user database username
-   * @param procedureName stored procedure name
-   * @param inParams input parameters (name:type:value format)
-   * @param outParams output parameters (name:TYPE format)
-   * @param vaultConfig vault configuration for password resolution
-   * @return execution result with exit code and output
-   */
-  public ExecutionResult executeProcedure(
-      final String dbType,
-      final String database,
-      final String user,
-      final String procedureName,
-      final String inParams,
-      final String outParams,
-      final VaultConfig vaultConfig) {
-
-    final ProcedureRequest request =
-        new ProcedureRequest(
-            new DatabaseRequest(dbType, database, user, vaultConfig),
-            Optional.ofNullable(procedureName),
-            Optional.ofNullable(inParams),
-            Optional.ofNullable(outParams));
-
-    return procedureService.execute(request);
-  }
-
-  /**
-   * Creates a new SQL request configuration using the modern record-based API.
+   * Immutable fluent configuration record for string-API SQL requests.
    *
    * <p><strong>Example:</strong>
    *
    * <pre>{@code
-   * ExecutionResult result = library.request("postgresql", "jdbc:postgresql://localhost/mydb", "admin")
-   *     .withSql("SELECT * FROM users WHERE status = ?")
+   * ExecutionResult result = JdbcCliLibrary.request("postgresql", jdbcUrl, "admin")
+   *     .withSql("SELECT * FROM employees WHERE status = ?")
    *     .withParams("active")
    *     .execute(library);
    * }</pre>
-   *
-   * @param dbType database type (oracle, mysql, postgresql, sqlserver, h2)
-   * @param database database connection string (JDBC URL)
-   * @param user database username
-   * @return new SqlRequestConfig instance
-   */
-  public static SqlRequestConfig request(
-      final String dbType, final String database, final String user) {
-    return SqlRequestConfig.of(dbType, database, user);
-  }
-
-  // ========================================================================
-  // TYPED QUERY API - Uses Optimized ResultSetHandler Framework
-  // ========================================================================
-
-  /**
-   * Executes a SELECT query and maps results to typed objects using the optimized ResultSetHandler
-   * framework.
-   *
-   * <p><strong>Performance:</strong> 18.5x faster than naive reflection. Uses:
-   *
-   * <ul>
-   *   <li>LRU cache (1000 entries) - reflection cost paid once per query shape
-   *   <li>Pre-compiled accessor arrays - O(1) property access vs Map lookup
-   *   <li>Type handler registry - shared type converters (Integer, String, Date, etc.)
-   * </ul>
-   *
-   * <p><strong>Usage Example:</strong>
-   *
-   * <pre>{@code
-   * // Define a bean with setters matching column names
-   * public class Employee {
-   *   private int id;
-   *   private String firstName;
-   *   private String lastName;
-   *   // ... setters ...
-   * }
-   *
-   * // Execute typed query
-   * List<Employee> employees = lib.queryForList(
-   *     "oracle",
-   *     "jdbc:oracle:thin:@localhost:1521:xe",
-   *     "hr",
-   *     "SELECT id, first_name, last_name FROM employees WHERE dept_id = ?",
-   *     List.of(10),
-   *     Employee.class,
-   *     VaultConfig.empty());
-   *
-   * // Use typed objects directly
-   * for (Employee emp : employees) {
-   *   System.out.println(emp.getFirstName() + " " + emp.getLastName());
-   * }
-   * }</pre>
-   *
-   * @param <T> result type
-   * @param dbType database type (oracle, mysql, postgresql, sqlserver, h2)
-   * @param database database connection string (JDBC URL)
-   * @param user database username
-   * @param sql SELECT query (can include ? placeholders)
-   * @param params query parameters (use empty list if no parameters)
-   * @param resultClass class to map rows to (must have setters matching column names)
-   * @param vaultConfig vault configuration for password resolution
-   * @return list of typed objects, empty list if no rows
-   * @throws QueryExecutionException if query execution or mapping fails
-   */
-  public <T> List<T> queryForList(
-      final String dbType,
-      final String database,
-      final String user,
-      final String sql,
-      final List<Object> params,
-      final Class<T> resultClass,
-      final VaultConfig vaultConfig) {
-
-    Objects.requireNonNull(sql, "SQL cannot be null");
-    Objects.requireNonNull(resultClass, "Result class cannot be null");
-
-    // Create a SqlRequest wrapper (DbRequest interface requirement)
-    final SqlRequest sqlRequest =
-        new SqlRequest(
-            new DatabaseRequest(dbType, database, user, vaultConfig),
-            Optional.of(sql),
-            Optional.empty(),
-            params != null ? params : List.of());
-
-    // Execute with password resolution and connection management
-    final ExecutionResult result =
-        executionContext.executeWithPasswordResolution(
-            sqlRequest,
-            conn -> {
-              try {
-                // Use optimized QueryExecutor with ResultSetHandler framework
-                var typedResult =
-                    QueryExecutor.executeTyped(
-                        conn, sql, params != null ? params : List.of(), resultClass);
-
-                // Wrap in ExecutionResult for consistency
-                return ExecutionResult.success(
-                    Map.of(
-                        "data", typedResult.data(),
-                        "rowCount", typedResult.rowCount()));
-
-              } catch (Exception e) {
-                return ExecutionResult.failure(1, "Query execution failed: " + e.getMessage());
-              }
-            });
-
-    // Extract typed results from ExecutionResult
-    if (result.getExitCode() != 0) {
-      throw new QueryExecutionException(result.getMessage());
-    }
-
-    @SuppressWarnings("unchecked")
-    List<T> data = (List<T>) result.getData().get("data");
-    return data != null ? data : List.of();
-  }
-
-  /**
-   * Executes a SELECT query and returns a single object, or null if no rows found.
-   *
-   * <p>Convenience method for queries expected to return one row (e.g., lookups by ID).
-   *
-   * @param <T> result type
-   * @param dbType database type
-   * @param database database connection string
-   * @param user database username
-   * @param sql SELECT query
-   * @param params query parameters
-   * @param resultClass class to map result to
-   * @param vaultConfig vault configuration
-   * @return single mapped object, or null if no rows found
-   * @throws IllegalStateException if query returns multiple rows
-   */
-  public <T> T queryForObject(
-      final String dbType,
-      final String database,
-      final String user,
-      final String sql,
-      final List<Object> params,
-      final Class<T> resultClass,
-      final VaultConfig vaultConfig) {
-
-    List<T> results = queryForList(dbType, database, user, sql, params, resultClass, vaultConfig);
-
-    if (results.isEmpty()) {
-      return null;
-    }
-    if (results.size() > 1) {
-      throw new IllegalStateException(
-          "Query returned " + results.size() + " rows, expected 1 or 0");
-    }
-    return results.get(0);
-  }
-
-  // ========================================================================
-  // Service Accessors
-  // ========================================================================
-
-  /**
-   * Gets the underlying SQL executor service for advanced usage.
-   *
-   * @return the SqlExecutorService instance
-   */
-  public SqlExecutorService getSqlService() {
-    return sqlService;
-  }
-
-  /**
-   * Gets the underlying procedure executor service for advanced usage.
-   *
-   * @return the ProcedureExecutorService instance
-   */
-  public ProcedureExecutorService getProcedureService() {
-    return procedureService;
-  }
-
-  /**
-   * Gets the password resolver for advanced usage.
-   *
-   * @return the PasswordResolver instance
-   */
-  public PasswordResolver getPasswordResolver() {
-    return passwordResolver;
-  }
-
-  /**
-   * Immutable configuration record for SQL requests using Java 21+ features. Uses wither methods to
-   * create modified copies, maintaining immutability.
-   *
-   * <p><strong>Example:</strong>
-   *
-   * <pre>{@code
-   * // Create and configure request
-   * SqlRequestConfig config = SqlRequestConfig.of("postgresql", "jdbc:postgresql://localhost/mydb", "admin")
-   *     .withSql("SELECT * FROM users WHERE id = ?")
-   *     .withParams(123)
-   *     .withVault(myVaultConfig);
-   *
-   * // Execute
-   * ExecutionResult result = config.execute(library);
-   * }</pre>
-   *
-   * @param dbType database type (oracle, mysql, postgresql, sqlserver, h2)
-   * @param database database connection string (JDBC URL)
-   * @param user database username
-   * @param sql SQL statement to execute (nullable)
-   * @param scriptPath path to SQL script file (nullable)
-   * @param params parameters for prepared statement
-   * @param vaultConfig vault configuration for password resolution
    */
   public record SqlRequestConfig(
       String dbType,
@@ -471,12 +155,12 @@ public final class JdbcCliLibrary {
     }
 
     /**
-     * Creates a minimal configuration with required database connection details.
+     * Creates a minimal configuration with required connection details.
      *
      * @param dbType database type
-     * @param database JDBC connection string
+     * @param database JDBC URL
      * @param user database username
-     * @return new SqlRequestConfig instance
+     * @return new {@code SqlRequestConfig}
      */
     public static SqlRequestConfig of(
         final String dbType, final String database, final String user) {
@@ -484,114 +168,81 @@ public final class JdbcCliLibrary {
           dbType, database, user, null, null, List.of(), VaultConfig.empty());
     }
 
-    /**
-     * Returns a new config with the specified SQL statement. Clears any previously set script path.
-     *
-     * @param sql SQL statement to execute
-     * @return new SqlRequestConfig with sql set
-     */
+    /** Returns a copy with the specified SQL statement; clears any script path. */
     public SqlRequestConfig withSql(final String sql) {
       return new SqlRequestConfig(dbType, database, user, sql, null, params, vaultConfig);
     }
 
-    /**
-     * Returns a new config with the specified script path. Clears any previously set SQL statement.
-     *
-     * @param scriptPath path to SQL script file
-     * @return new SqlRequestConfig with script path set
-     */
+    /** Returns a copy with the specified script path; clears any SQL statement. */
     public SqlRequestConfig withScript(final String scriptPath) {
       return new SqlRequestConfig(dbType, database, user, null, scriptPath, params, vaultConfig);
     }
 
-    /**
-     * Returns a new config with the specified parameters.
-     *
-     * @param params parameter values for prepared statement
-     * @return new SqlRequestConfig with params set
-     */
+    /** Returns a copy with the specified varargs parameters. */
     public SqlRequestConfig withParams(final Object... params) {
       return new SqlRequestConfig(
           dbType, database, user, sql, scriptPath, List.of(params), vaultConfig);
     }
 
-    /**
-     * Returns a new config with the specified parameters list.
-     *
-     * @param params parameter values for prepared statement
-     * @return new SqlRequestConfig with params set
-     */
+    /** Returns a copy with the specified parameters list. */
     public SqlRequestConfig withParams(final List<Object> params) {
       return new SqlRequestConfig(dbType, database, user, sql, scriptPath, params, vaultConfig);
     }
 
-    /**
-     * Returns a new config with the specified vault configuration.
-     *
-     * @param vaultConfig vault configuration
-     * @return new SqlRequestConfig with vault config set
-     */
+    /** Returns a copy with the specified vault configuration. */
     public SqlRequestConfig withVault(final VaultConfig vaultConfig) {
       return new SqlRequestConfig(dbType, database, user, sql, scriptPath, params, vaultConfig);
     }
 
-    /**
-     * Returns a new config with vault configuration from individual parameters.
-     *
-     * @param vaultUrl vault server URL
-     * @param roleId vault role ID
-     * @param secretId vault secret ID
-     * @param ait application identifier token
-     * @return new SqlRequestConfig with vault config set
-     */
+    /** Returns a copy with vault configuration from individual parameters. */
     public SqlRequestConfig withVault(
         final String vaultUrl, final String roleId, final String secretId, final String ait) {
       return withVault(new VaultConfig(vaultUrl, roleId, secretId, ait));
     }
 
     /**
-     * Executes the configured SQL statement or script using the provided library instance.
+     * Executes via the string API of the provided library instance.
      *
-     * @param library the JdbcCliLibrary instance to use for execution
-     * @return execution result with exit code and output
-     * @throws IllegalStateException if neither SQL nor script path is set
+     * @param library library instance to use
+     * @return execution result
+     * @throws IllegalStateException if neither SQL nor script path is configured
      */
     public ExecutionResult execute(final JdbcCliLibrary library) {
       if (sql == null && scriptPath == null) {
         throw new IllegalStateException("Either SQL statement or script path is required");
       }
-
       if (scriptPath != null) {
-        return library.executeScript(dbType, database, user, scriptPath, vaultConfig);
+        return library.string().runScriptStringApi(dbType, database, user, scriptPath, vaultConfig);
       }
-      return library.executeSql(dbType, database, user, sql, params, vaultConfig);
+      return library.string().runSqlStringApi(dbType, database, user, sql, params, vaultConfig);
     }
 
-    /**
-     * Checks if this config has a SQL statement set.
-     *
-     * @return true if sql is set
-     */
+    /** Returns {@code true} if a SQL statement is configured. */
     public boolean hasSql() {
       return sql != null && !sql.isBlank();
     }
 
-    /**
-     * Checks if this config has a script path set.
-     *
-     * @return true if scriptPath is set
-     */
+    /** Returns {@code true} if a script path is configured. */
     public boolean hasScript() {
       return scriptPath != null && !scriptPath.isBlank();
     }
 
-    /**
-     * Checks if this config is ready for execution.
-     *
-     * @return true if either sql or scriptPath is set
-     */
+    /** Returns {@code true} if either SQL or script path is configured. */
     public boolean isReady() {
       return hasSql() || hasScript();
     }
+  }
+
+  /**
+   * Creates a new fluent {@link SqlRequestConfig} for the string API.
+   *
+   * @param dbType database type
+   * @param database JDBC URL
+   * @param user database username
+   * @return new {@code SqlRequestConfig}
+   */
+  public static SqlRequestConfig request(
+      final String dbType, final String database, final String user) {
+    return SqlRequestConfig.of(dbType, database, user);
   }
 }

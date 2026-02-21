@@ -41,7 +41,7 @@ public sealed interface QueryResult permits QueryResult.TypedResult, QueryResult
 
     /** Returns the first result, or null if empty. */
     public T first() {
-      return data.isEmpty() ? null : data.get(0);
+      return data.isEmpty() ? null : data.getFirst();
     }
   }
 

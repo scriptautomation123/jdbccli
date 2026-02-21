@@ -10,6 +10,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 
+import com.company.app.service.database.stringapi.SqlJdbcHelper;
 import com.company.app.service.domain.model.ExecutionResult;
 
 /**
@@ -40,7 +41,7 @@ import com.company.app.service.domain.model.ExecutionResult;
  *
  * // Or use DuckDB directly
  * try (var conn = DuckDbExperiment.createConnection()) {
- *     var result = DuckDbExperiment.execute(conn, "SELECT * FROM 'data.parquet'");
+ *   var result = DuckDbExperiment.execute(conn, "SELECT * FROM 'data.parquet'");
  * }
  * }</pre>
  *

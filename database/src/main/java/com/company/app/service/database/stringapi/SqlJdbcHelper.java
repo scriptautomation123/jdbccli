@@ -1,4 +1,4 @@
-package com.company.app.service.database;
+package com.company.app.service.database.stringapi;
 
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
@@ -12,7 +12,7 @@ import com.company.app.service.util.LoggingUtils;
 
 /**
  * JDBC helper utilities for SQL result formatting. Script parsing has been moved to {@link
- * ScriptParser}.
+ * com.company.app.service.database.ScriptParser}.
  */
 public final class SqlJdbcHelper {
 

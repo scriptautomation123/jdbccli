@@ -62,7 +62,8 @@ public class ExecProcedureCmd extends BaseDatabaseCliCommand {
     try {
       final ExecutionResult result =
           getLibrary()
-              .executeProcedure(
+              .string()
+              .runProcedureStringApi(
                   getTypeString(),
                   database,
                   user,

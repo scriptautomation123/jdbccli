@@ -11,9 +11,10 @@ import java.util.List;
 import com.company.app.service.auth.PasswordResolver;
 import com.company.app.service.database.ScriptParser;
 import com.company.app.service.database.ScriptParser.ParsedScript;
-import com.company.app.service.database.SqlJdbcHelper;
+import com.company.app.service.database.stringapi.SqlJdbcHelper;
 import com.company.app.service.domain.model.DbRequest;
 import com.company.app.service.domain.model.ExecutionResult;
+import com.company.app.service.domain.model.ProcedureRequest;
 import com.company.app.service.domain.model.SqlRequest;
 import com.company.app.service.util.LoggingUtils;
 
@@ -85,14 +86,17 @@ public final class SqlExecutorService {
       return ExecutionResult.failure(1, "[ERROR] Request cannot be null");
     }
 
-    if (!(request instanceof SqlRequest sqlRequest)) {
-      return ExecutionResult.failure(
-          1, "[ERROR] Unsupported request type: " + request.getClass().getName());
-    }
-
-    // Delegate to execution context with lambda for SQL-specific logic
-    return executionContext.executeWithPasswordResolution(
-        request, conn -> executeWithConnection(sqlRequest, conn));
+    // Exhaustive sealed switch — compiler enforces all DbRequest subtypes are
+    // handled.
+    // No default: adding a new DbRequest subtype will produce a compile error here.
+    return switch (request) {
+      case SqlRequest sqlRequest ->
+          executionContext.executeWithPasswordResolution(
+              sqlRequest, conn -> executeWithConnection(sqlRequest, conn));
+      case ProcedureRequest ignored ->
+          ExecutionResult.failure(
+              1, "[ERROR] Unsupported request type: " + request.getClass().getName());
+    };
   }
 
   /**
@@ -107,10 +111,16 @@ public final class SqlExecutorService {
   ExecutionResult executeWithConnection(final SqlRequest request, final Connection connection)
       throws SQLException {
 
+    // Record pattern deconstruction — exhaustive on SqlRequest (a final record).
+    // Guards check which mode is active; the unguarded arm handles the invalid
+    // "neither" case.
     return switch (request) {
-      case SqlRequest r when r.isScriptMode() -> executeScript(r, connection);
-      case SqlRequest r when r.isSqlMode() -> executeSingleSql(r, connection);
-      default ->
+      case SqlRequest(var ignored, var ignored2, var script, var ignored3) when script
+              .isPresent() ->
+          executeScript(request, connection);
+      case SqlRequest(var ignored, var sql, var ignored2, var ignored3) when sql.isPresent() ->
+          executeSingleSql(request, connection);
+      case SqlRequest ignored ->
           ExecutionResult.failure(1, "[ERROR] Either SQL statement or --script must be specified");
     };
   }
@@ -170,7 +180,8 @@ public final class SqlExecutorService {
   private ExecutionResult executeStatement(final String sql, final Connection connection)
       throws SQLException {
 
-    //noinspection SqlSourceToSinkFlow - Intentional: CLI tool for executing user SQL
+    // noinspection SqlSourceToSinkFlow - Intentional: CLI tool for executing user
+    // SQL
     try (Statement statement = connection.createStatement()) {
       final boolean hasResults = statement.execute(sql);
 

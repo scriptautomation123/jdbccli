@@ -51,11 +51,13 @@ public class ExecSqlCmd extends BaseDatabaseCliCommand {
       if (script != null && !script.isBlank()) {
         result =
             getLibrary()
-                .executeScript(getTypeString(), database, user, script, createVaultConfig());
+                .string()
+                .runScriptStringApi(getTypeString(), database, user, script, createVaultConfig());
       } else {
         result =
             getLibrary()
-                .executeSql(
+                .string()
+                .runSqlStringApi(
                     getTypeString(), database, user, sql, parseParams(params), createVaultConfig());
       }
       if (result.getExitCode() == 0) {
