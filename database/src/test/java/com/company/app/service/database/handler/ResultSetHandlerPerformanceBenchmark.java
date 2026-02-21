@@ -30,22 +30,19 @@ import com.company.app.service.database.typedapi.DefaultResultSetHandlerFactory;
 import com.company.app.service.database.typedapi.ResultSetHandler;
 
 /**
- * JMH Benchmark comparing the optimized ResultSetHandler implementation against
- * naive approaches.
+ * JMH Benchmark comparing the optimized ResultSetHandler implementation against naive approaches.
  *
- * <p>
- * This benchmark demonstrates the cumulative performance improvements from:
+ * <p>This benchmark demonstrates the cumulative performance improvements from:
  *
  * <ol>
- * <li>Caching reflection results (vs per-row reflection)
- * <li>Array indexing (vs Map lookups)
- * <li>Type-specific handlers (vs generic getObject())
- * <li>Optimized string conversion (vs regex/StringBuilder)
- * <li>Bounded LRU cache (vs unbounded cache)
+ *   <li>Caching reflection results (vs per-row reflection)
+ *   <li>Array indexing (vs Map lookups)
+ *   <li>Type-specific handlers (vs generic getObject())
+ *   <li>Optimized string conversion (vs regex/StringBuilder)
+ *   <li>Bounded LRU cache (vs unbounded cache)
  * </ol>
  *
- * <p>
- * <strong>Run with:</strong>
+ * <p><strong>Run with:</strong>
  *
  * <pre>
  * mvn clean test-compile exec:java \
@@ -57,7 +54,9 @@ import com.company.app.service.database.typedapi.ResultSetHandler;
 @BenchmarkMode(Mode.AverageTime)
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
 @State(Scope.Benchmark)
-@Fork(value = 1, jvmArgs = { "-Xms2G", "-Xmx2G" })
+@Fork(
+    value = 1,
+    jvmArgs = {"-Xms2G", "-Xmx2G"})
 @Warmup(iterations = 3, time = 2, timeUnit = TimeUnit.SECONDS)
 @Measurement(iterations = 5, time = 3, timeUnit = TimeUnit.SECONDS)
 public class ResultSetHandlerPerformanceBenchmark {
@@ -87,7 +86,8 @@ public class ResultSetHandlerPerformanceBenchmark {
 
     // Insert test data
     conn.setAutoCommit(false);
-    try (PreparedStatement pstmt = conn.prepareStatement("INSERT INTO users VALUES (?, ?, ?, ?, ?, ?, ?)")) {
+    try (PreparedStatement pstmt =
+        conn.prepareStatement("INSERT INTO users VALUES (?, ?, ?, ?, ?, ?, ?)")) {
       for (int i = 0; i < ROW_COUNT; i++) {
         pstmt.setInt(1, i);
         pstmt.setString(2, "First" + i);
@@ -117,8 +117,7 @@ public class ResultSetHandlerPerformanceBenchmark {
   }
 
   /**
-   * Baseline: Naive reflection per row (worst case). Demonstrates the cost of
-   * doing reflection on
+   * Baseline: Naive reflection per row (worst case). Demonstrates the cost of doing reflection on
    * every single row.
    */
   @Benchmark
@@ -132,8 +131,7 @@ public class ResultSetHandlerPerformanceBenchmark {
   }
 
   /**
-   * Improvement 1: Cache reflection results per query. Shows the benefit of
-   * moving reflection from
+   * Improvement 1: Cache reflection results per query. Shows the benefit of moving reflection from
    * per-row to per-query.
    */
   @Benchmark
@@ -148,14 +146,14 @@ public class ResultSetHandlerPerformanceBenchmark {
   }
 
   /**
-   * Current implementation: Fully optimized with factory caching. This is your
-   * production code with
+   * Current implementation: Fully optimized with factory caching. This is your production code with
    * all optimizations enabled.
    */
   @Benchmark
   public void optimizedWithFactoryCaching(Blackhole bh) throws Exception {
     try (ResultSet rs = queryStatement.executeQuery()) {
-      ResultSetHandler<User> handler = DefaultResultSetHandlerFactory.getHandler(User.class, rs.getMetaData());
+      ResultSetHandler<User> handler =
+          DefaultResultSetHandlerFactory.getHandler(User.class, rs.getMetaData());
       while (rs.next()) {
         bh.consume(handler.handle(rs));
       }
@@ -163,14 +161,14 @@ public class ResultSetHandlerPerformanceBenchmark {
   }
 
   /**
-   * Optimized without caching: Shows benefit of factory cache. Creates a new
-   * handler on each query
+   * Optimized without caching: Shows benefit of factory cache. Creates a new handler on each query
    * to measure caching impact.
    */
   @Benchmark
   public void optimizedNoCaching(Blackhole bh) throws Exception {
     try (ResultSet rs = queryStatement.executeQuery()) {
-      ResultSetHandler<User> handler = DefaultResultSetHandlerFactory.createHandler(User.class, rs.getMetaData());
+      ResultSetHandler<User> handler =
+          DefaultResultSetHandlerFactory.createHandler(User.class, rs.getMetaData());
       while (rs.next()) {
         bh.consume(handler.handle(rs));
       }
@@ -249,8 +247,7 @@ public class ResultSetHandlerPerformanceBenchmark {
   // ====================
 
   /**
-   * Naive mapper that does reflection on every row. This represents the "simplest
-   * possible"
+   * Naive mapper that does reflection on every row. This represents the "simplest possible"
    * implementation.
    */
   static class NaiveReflectionMapper<T> {
@@ -263,10 +260,11 @@ public class ResultSetHandlerPerformanceBenchmark {
         String columnName = metaData.getColumnLabel(i);
 
         // Naive string conversion (regex on every column!)
-        String propertyName = columnName
-            .toLowerCase(java.util.Locale.ENGLISH)
-            .replaceAll("_", "")
-            .replaceAll("\\s+", "");
+        String propertyName =
+            columnName
+                .toLowerCase(java.util.Locale.ENGLISH)
+                .replaceAll("_", "")
+                .replaceAll("\\s+", "");
 
         // Linear search through all methods (O(n) per column!)
         for (Method method : targetClass.getMethods()) {
@@ -287,8 +285,7 @@ public class ResultSetHandlerPerformanceBenchmark {
   }
 
   /**
-   * Cached reflection mapper that pre-compiles accessor information. This is the
-   * first
+   * Cached reflection mapper that pre-compiles accessor information. This is the first
    * optimization: cache reflection results per query.
    */
   static class CachedReflectionMapper<T> {

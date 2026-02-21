@@ -10,23 +10,18 @@ import com.company.app.service.database.typedapi.DefaultResultSetHandlerFactory;
 import com.company.app.service.database.typedapi.ResultSetHandler;
 
 /**
- * Unified query executor supporting both typed object mapping and string
- * formatting. Replaces
+ * Unified query executor supporting both typed object mapping and string formatting. Replaces
  * separate paths for handler-based and formatter-based execution.
  *
- * <p>
- * <strong>Architecture:</strong>
+ * <p><strong>Architecture:</strong>
  *
  * <pre>
  * executeTyped()     → ResultSetHandler → List&lt;T&gt;     (18.5x faster, for library users)
  * executeFormatted() → SqlJdbcHelper    → String      (for CLI display)
  * </pre>
  *
- * <p>
- * <strong>Performance:</strong> Typed execution uses the optimized handler
- * framework with LRU
- * cache and pre-compiled accessor arrays. Formatted execution uses direct
- * string building for CLI
+ * <p><strong>Performance:</strong> Typed execution uses the optimized handler framework with LRU
+ * cache and pre-compiled accessor arrays. Formatted execution uses direct string building for CLI
  * display.
  */
 public final class QueryExecutor {
@@ -36,24 +31,21 @@ public final class QueryExecutor {
   }
 
   /**
-   * Executes a query and returns typed objects using the optimized
-   * ResultSetHandler framework.
+   * Executes a query and returns typed objects using the optimized ResultSetHandler framework.
    *
-   * <p>
-   * <strong>Performance:</strong> 18.5x faster than naive reflection. Uses:
+   * <p><strong>Performance:</strong> 18.5x faster than naive reflection. Uses:
    *
    * <ul>
-   * <li>LRU cache (1000 entries) - reflection cost paid once
-   * <li>Pre-compiled accessor arrays - O(1) property access
-   * <li>Type handler registry - shared type converters
+   *   <li>LRU cache (1000 entries) - reflection cost paid once
+   *   <li>Pre-compiled accessor arrays - O(1) property access
+   *   <li>Type handler registry - shared type converters
    * </ul>
    *
-   * @param <T>         result type
-   * @param conn        database connection
-   * @param sql         SQL SELECT statement
-   * @param params      query parameters (can be empty)
-   * @param resultClass class to map rows to (must have setters matching column
-   *                    names)
+   * @param <T> result type
+   * @param conn database connection
+   * @param sql SQL SELECT statement
+   * @param params query parameters (can be empty)
+   * @param resultClass class to map rows to (must have setters matching column names)
    * @return typed query result with list of objects
    * @throws SQLException if query execution or mapping fails
    */
@@ -69,7 +61,8 @@ public final class QueryExecutor {
 
       try (ResultSet rs = pstmt.executeQuery()) {
         // Use cached handler from factory (LRU cache hit = O(1))
-        ResultSetHandler<T> handler = DefaultResultSetHandlerFactory.getHandler(resultClass, rs.getMetaData());
+        ResultSetHandler<T> handler =
+            DefaultResultSetHandlerFactory.getHandler(resultClass, rs.getMetaData());
 
         // Map all rows using pre-compiled accessors
         List<T> results = handler.handleAll(rs);
@@ -80,12 +73,11 @@ public final class QueryExecutor {
   }
 
   /**
-   * Executes a query and returns formatted string table for CLI display. Uses
-   * direct string
+   * Executes a query and returns formatted string table for CLI display. Uses direct string
    * building - no object allocation overhead.
    *
-   * @param conn   database connection
-   * @param sql    SQL SELECT statement
+   * @param conn database connection
+   * @param sql SQL SELECT statement
    * @param params query parameters (can be empty)
    * @return formatted result with string table
    * @throws SQLException if query execution fails
@@ -114,8 +106,7 @@ public final class QueryExecutor {
   }
 
   /**
-   * Extracts row count from formatted result message. Helper method - in
-   * production you'd track
+   * Extracts row count from formatted result message. Helper method - in production you'd track
    * this during formatting.
    */
   private static int extractRowCount(String formattedOutput) {

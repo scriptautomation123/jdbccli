@@ -13,26 +13,20 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 /**
- * ResultSetHandler implementation that maps ResultSet rows to Java bean
- * objects.
+ * ResultSetHandler implementation that maps ResultSet rows to Java bean objects.
  *
- * <p>
- * <strong>Optimization Pattern:</strong> This handler uses pre-compiled {@link
- * JdbcPropertyAccessor} arrays indexed by column position for O(1) property
- * access. On
+ * <p><strong>Optimization Pattern:</strong> This handler uses pre-compiled {@link
+ * JdbcPropertyAccessor} arrays indexed by column position for O(1) property access. On
  * construction, it:
  *
  * <ol>
- * <li>Inspects the ResultSet metadata for column names
- * <li>Matches columns to bean properties (with underscore-to-camelCase
- * conversion)
- * <li>Builds an accessor array indexed by column position
- * <li>Each accessor holds a pre-resolved setter method and type handler
+ *   <li>Inspects the ResultSet metadata for column names
+ *   <li>Matches columns to bean properties (with underscore-to-camelCase conversion)
+ *   <li>Builds an accessor array indexed by column position
+ *   <li>Each accessor holds a pre-resolved setter method and type handler
  * </ol>
  *
- * <p>
- * Subsequent row handling is a simple loop over the accessor array with direct
- * method
+ * <p>Subsequent row handling is a simple loop over the accessor array with direct method
  * invocation—no reflection lookup, no map access per column.
  *
  * @param <T> the target bean type
@@ -50,13 +44,11 @@ public final class ObjectResultHandler<T> implements ResultSetHandler<T> {
   /**
    * Creates a new handler for the given target type and ResultSet metadata.
    *
-   * <p>
-   * <strong>Note:</strong> This constructor performs reflection to build the
-   * accessor array.
+   * <p><strong>Note:</strong> This constructor performs reflection to build the accessor array.
    * Instances should be cached by {@link DefaultResultSetHandlerFactory}.
    *
    * @param targetType the target bean class
-   * @param metaData   the ResultSet metadata
+   * @param metaData the ResultSet metadata
    * @throws SQLException if metadata cannot be read
    */
   public ObjectResultHandler(Class<T> targetType, ResultSetMetaData metaData) throws SQLException {
@@ -69,7 +61,7 @@ public final class ObjectResultHandler<T> implements ResultSetHandler<T> {
    * Creates a handler using existing accessor array (for factory caching).
    *
    * @param targetType the target bean class
-   * @param accessors  pre-built accessor array
+   * @param accessors pre-built accessor array
    */
   ObjectResultHandler(Class<T> targetType, JdbcPropertyAccessor[] accessors) {
     this.targetType = targetType;
@@ -110,7 +102,7 @@ public final class ObjectResultHandler<T> implements ResultSetHandler<T> {
   /**
    * Builds the accessor array by matching ResultSet columns to bean properties.
    *
-   * @param type     the target bean class
+   * @param type the target bean class
    * @param metaData the ResultSet metadata
    * @return array of accessors indexed by column position (0-based)
    * @throws SQLException if metadata cannot be read
@@ -152,7 +144,7 @@ public final class ObjectResultHandler<T> implements ResultSetHandler<T> {
   /**
    * Gets the column name from metadata, preferring label over name.
    *
-   * @param metaData    the ResultSet metadata
+   * @param metaData the ResultSet metadata
    * @param columnIndex the column index (1-based)
    * @return the column name
    * @throws SQLException if metadata cannot be read
@@ -166,10 +158,10 @@ public final class ObjectResultHandler<T> implements ResultSetHandler<T> {
   /**
    * Creates a property accessor for a column.
    *
-   * @param type       the target bean class
+   * @param type the target bean class
    * @param columnName the column name
-   * @param setters    the setter lookup map
-   * @param registry   the type handler registry
+   * @param setters the setter lookup map
+   * @param registry the type handler registry
    * @return the property accessor
    */
   private static <T> JdbcPropertyAccessor createAccessor(
@@ -191,7 +183,7 @@ public final class ObjectResultHandler<T> implements ResultSetHandler<T> {
    * Finds the matching setter for a column name.
    *
    * @param columnName the column name
-   * @param setters    the setter lookup map
+   * @param setters the setter lookup map
    * @return the property match result
    */
   private static PropertyMatch findSetter(String columnName, Map<String, Method> setters) {
@@ -213,8 +205,8 @@ public final class ObjectResultHandler<T> implements ResultSetHandler<T> {
    * Creates an accessor with a type handler.
    *
    * @param columnName the column name
-   * @param match      the property match
-   * @param registry   the type handler registry
+   * @param match the property match
+   * @param registry the type handler registry
    * @return the property accessor
    */
   private static JdbcPropertyAccessor createAccessorWithHandler(
@@ -233,7 +225,8 @@ public final class ObjectResultHandler<T> implements ResultSetHandler<T> {
       handler = registry.getHandler(Object.class);
     }
 
-    JdbcPropertyAccessor accessor = JdbcPropertyAccessor.create(match.propertyName, match.setter, handler);
+    JdbcPropertyAccessor accessor =
+        JdbcPropertyAccessor.create(match.propertyName, match.setter, handler);
     if (LOG.isTraceEnabled()) {
       LOG.trace(
           "Mapped column '{}' -> property '{}' ({})",
@@ -277,7 +270,7 @@ public final class ObjectResultHandler<T> implements ResultSetHandler<T> {
   /**
    * Creates a cache key from metadata without building the full handler.
    *
-   * @param type     the target type
+   * @param type the target type
    * @param metaData the ResultSet metadata
    * @return cache key string
    * @throws SQLException if metadata cannot be read

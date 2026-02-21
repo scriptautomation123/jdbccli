@@ -18,17 +18,15 @@ import com.company.app.service.database.typedapi.UnderscoreToCamelCase;
 /**
  * JMH Benchmark comparing optimized string conversion against naive approaches.
  *
- * <p>
- * Demonstrates the performance difference between:
+ * <p>Demonstrates the performance difference between:
  *
  * <ul>
- * <li>Optimized: Single-pass char array manipulation
- * <li>Naive: Regex + StringBuilder
- * <li>Naive: String.split() + StringBuilder
+ *   <li>Optimized: Single-pass char array manipulation
+ *   <li>Naive: Regex + StringBuilder
+ *   <li>Naive: String.split() + StringBuilder
  * </ul>
  *
- * <p>
- * <strong>Run with:</strong>
+ * <p><strong>Run with:</strong>
  *
  * <pre>
  * mvn clean test-compile exec:java \
@@ -46,21 +44,18 @@ import com.company.app.service.database.typedapi.UnderscoreToCamelCase;
 public class UnderscoreToCamelCaseBenchmark {
 
   private static final String[] TEST_STRINGS = {
-      "user_name",
-      "first_name",
-      "last_name",
-      "created_at",
-      "updated_at",
-      "is_active",
-      "USER_ID",
-      "FIRST_NAME_LAST",
-      "email_address_primary"
+    "user_name",
+    "first_name",
+    "last_name",
+    "created_at",
+    "updated_at",
+    "is_active",
+    "USER_ID",
+    "FIRST_NAME_LAST",
+    "email_address_primary"
   };
 
-  /**
-   * Baseline: Naive approach using regex. This is what many developers write
-   * first.
-   */
+  /** Baseline: Naive approach using regex. This is what many developers write first. */
   @Benchmark
   public void baselineRegexBased(Blackhole bh) {
     for (String s : TEST_STRINGS) {
@@ -112,8 +107,7 @@ public class UnderscoreToCamelCaseBenchmark {
   }
 
   /**
-   * Naive conversion using String.split() and StringBuilder. Better than regex
-   * but still does
+   * Naive conversion using String.split() and StringBuilder. Better than regex but still does
    * multiple passes.
    */
   private static String naiveSplitConvert(String input) {

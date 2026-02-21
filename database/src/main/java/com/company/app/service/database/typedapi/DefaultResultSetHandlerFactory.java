@@ -11,26 +11,17 @@ import org.apache.logging.log4j.Logger;
 /**
  * Factory for creating and caching {@link ResultSetHandler} instances.
  *
- * <p>
- * <strong>Optimization Pattern:</strong> This factory caches handlers by query
- * structure + bean
- * type, paying reflection cost once per unique query shape. Subsequent
- * executions of the same query
+ * <p><strong>Optimization Pattern:</strong> This factory caches handlers by query structure + bean
+ * type, paying reflection cost once per unique query shape. Subsequent executions of the same query
  * pattern hit the cache for near-hand-coded performance.
  *
- * <p>
- * <strong>Issue Fixed:</strong> The cache is now bounded with LRU eviction to
- * prevent memory
- * leaks in long-running applications with dynamic queries. Previously, the
- * static cache was
+ * <p><strong>Issue Fixed:</strong> The cache is now bounded with LRU eviction to prevent memory
+ * leaks in long-running applications with dynamic queries. Previously, the static cache was
  * unbounded, potentially causing OOM errors.
  *
- * <p>
- * <strong>Cache Key Format:</strong>
- * {@code ClassName:column1,column2,column3,...}
+ * <p><strong>Cache Key Format:</strong> {@code ClassName:column1,column2,column3,...}
  *
- * <p>
- * <strong>Performance Chain:</strong>
+ * <p><strong>Performance Chain:</strong>
  *
  * <pre>
  * Query → ResultSetHandlerFactory (cached) → ObjectResultHandler (accessor array) → TypeHandler (registry)
@@ -44,37 +35,32 @@ public final class DefaultResultSetHandlerFactory {
   private static final Logger LOG = LogManager.getLogger(DefaultResultSetHandlerFactory.class);
 
   /**
-   * Default maximum cache size. This limits memory usage while providing good
-   * cache hit rates for
+   * Default maximum cache size. This limits memory usage while providing good cache hit rates for
    * typical applications.
    */
   public static final int DEFAULT_MAX_CACHE_SIZE = 1000;
 
   /**
-   * Bounded LRU cache for handler instances. Uses a LinkedHashMap with
-   * access-order and
+   * Bounded LRU cache for handler instances. Uses a LinkedHashMap with access-order and
    * removeEldestEntry for automatic eviction.
    *
-   * <p>
-   * <strong>Issue Fixed:</strong> Previously this was an unbounded
-   * ConcurrentHashMap which could
+   * <p><strong>Issue Fixed:</strong> Previously this was an unbounded ConcurrentHashMap which could
    * grow indefinitely. Now it's a bounded LRU cache.
    *
-   * <p>
-   * <strong>Thread Safety:</strong> Access is synchronized via
-   * Collections.synchronizedMap or
+   * <p><strong>Thread Safety:</strong> Access is synchronized via Collections.synchronizedMap or
    * explicit synchronization.
    */
-  private static final Map<String, ResultSetHandler<?>> CACHE = new LinkedHashMap<>(16, 0.75f, true) {
-    @Override
-    protected boolean removeEldestEntry(Map.Entry<String, ResultSetHandler<?>> eldest) {
-      boolean shouldRemove = size() > DEFAULT_MAX_CACHE_SIZE;
-      if (shouldRemove && LOG.isDebugEnabled()) {
-        LOG.debug("LRU evicting cached handler: {} (cache size: {})", eldest.getKey(), size());
-      }
-      return shouldRemove;
-    }
-  };
+  private static final Map<String, ResultSetHandler<?>> CACHE =
+      new LinkedHashMap<>(16, 0.75f, true) {
+        @Override
+        protected boolean removeEldestEntry(Map.Entry<String, ResultSetHandler<?>> eldest) {
+          boolean shouldRemove = size() > DEFAULT_MAX_CACHE_SIZE;
+          if (shouldRemove && LOG.isDebugEnabled()) {
+            LOG.debug("LRU evicting cached handler: {} (cache size: {})", eldest.getKey(), size());
+          }
+          return shouldRemove;
+        }
+      };
 
   /** Lock object for thread-safe cache access. */
   private static final Object CACHE_LOCK = new Object();
@@ -84,21 +70,19 @@ public final class DefaultResultSetHandlerFactory {
   }
 
   /**
-   * Creates or retrieves a cached handler for the given type and ResultSet
-   * metadata.
+   * Creates or retrieves a cached handler for the given type and ResultSet metadata.
    *
-   * <p>
-   * <strong>Cache Behavior:</strong>
+   * <p><strong>Cache Behavior:</strong>
    *
    * <ul>
-   * <li>Cache hit: Returns existing handler (O(1) lookup)
-   * <li>Cache miss: Creates handler, caches it, returns it
-   * <li>Cache full: LRU entry is evicted before adding new entry
+   *   <li>Cache hit: Returns existing handler (O(1) lookup)
+   *   <li>Cache miss: Creates handler, caches it, returns it
+   *   <li>Cache full: LRU entry is evicted before adding new entry
    * </ul>
    *
-   * @param type     the target bean type
+   * @param type the target bean type
    * @param metaData the ResultSet metadata
-   * @param <T>      the target type
+   * @param <T> the target type
    * @return the handler (cached if possible)
    * @throws SQLException if metadata cannot be read or handler creation fails
    */
@@ -133,13 +117,12 @@ public final class DefaultResultSetHandlerFactory {
   }
 
   /**
-   * Creates a handler without caching. Use this for one-off queries or when you
-   * want to control
+   * Creates a handler without caching. Use this for one-off queries or when you want to control
    * caching yourself.
    *
-   * @param type     the target bean type
+   * @param type the target bean type
    * @param metaData the ResultSet metadata
-   * @param <T>      the target type
+   * @param <T> the target type
    * @return a new handler instance
    * @throws SQLException if metadata cannot be read or handler creation fails
    */
@@ -171,9 +154,7 @@ public final class DefaultResultSetHandlerFactory {
   /**
    * Clears the handler cache. Useful for testing or reclaiming memory.
    *
-   * <p>
-   * <strong>Note:</strong> This should rarely be needed in production as the LRU
-   * eviction
+   * <p><strong>Note:</strong> This should rarely be needed in production as the LRU eviction
    * handles memory management automatically.
    */
   public static void clearCache() {
@@ -199,7 +180,7 @@ public final class DefaultResultSetHandlerFactory {
    * Cache statistics for monitoring and debugging.
    *
    * @param currentSize current number of cached handlers
-   * @param maxSize     maximum cache capacity
+   * @param maxSize maximum cache capacity
    */
   public record CacheStats(int currentSize, int maxSize) {
     /** Returns the cache utilization as a percentage. */

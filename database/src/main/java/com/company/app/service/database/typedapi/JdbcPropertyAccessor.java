@@ -7,13 +7,9 @@ import java.sql.SQLException;
 /**
  * Interface for accessing a property of a Java bean from a JDBC ResultSet.
  *
- * <p>
- * <strong>Optimization Pattern:</strong> Property accessors are pre-compiled
- * and stored in
- * arrays indexed by column position, enabling O(1) property access vs Map
- * lookups. The accessor
- * encapsulates the setter method and type handler needed to populate a bean
- * property.
+ * <p><strong>Optimization Pattern:</strong> Property accessors are pre-compiled and stored in
+ * arrays indexed by column position, enabling O(1) property access vs Map lookups. The accessor
+ * encapsulates the setter method and type handler needed to populate a bean property.
  *
  * @see ObjectResultHandler
  */
@@ -22,10 +18,10 @@ public interface JdbcPropertyAccessor {
   /**
    * Sets the property value on the target object by reading from the ResultSet.
    *
-   * @param target      the object to set the property on
-   * @param rs          the ResultSet to read the value from
+   * @param target the object to set the property on
+   * @param rs the ResultSet to read the value from
    * @param columnIndex the 1-based column index
-   * @throws SQLException                 if a database access error occurs
+   * @throws SQLException if a database access error occurs
    * @throws ReflectiveOperationException if the property cannot be set
    */
   void setProperty(Object target, ResultSet rs, int columnIndex)
@@ -59,8 +55,8 @@ public interface JdbcPropertyAccessor {
    * Creates a property accessor for the given setter method and type handler.
    *
    * @param propertyName the property name
-   * @param setter       the setter method
-   * @param handler      the type handler for conversion
+   * @param setter the setter method
+   * @param handler the type handler for conversion
    * @return the property accessor
    */
   static JdbcPropertyAccessor create(String propertyName, Method setter, TypeHandler<?> handler) {

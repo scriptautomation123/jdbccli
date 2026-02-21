@@ -16,25 +16,20 @@ import com.company.app.service.database.typedapi.DefaultResultSetHandlerFactory;
 import com.company.app.service.database.typedapi.ResultSetHandler;
 
 /**
- * Incremental benchmark demonstrating the performance improvements of the
- * ResultSetHandler
+ * Incremental benchmark demonstrating the performance improvements of the ResultSetHandler
  * framework.
  *
- * <p>
- * This tutorial-style class shows how the optimizations described in the
- * package documentation
- * translate to measurable performance improvements. It follows the same
- * pedagogical approach as
+ * <p>This tutorial-style class shows how the optimizations described in the package documentation
+ * translate to measurable performance improvements. It follows the same pedagogical approach as
  * {@link com.company.app.service.database.IncrementalBenchmarkTutorial}.
  *
- * <p>
- * <strong>Benchmark Scenarios:</strong>
+ * <p><strong>Benchmark Scenarios:</strong>
  *
  * <ol>
- * <li>Naive: Manual ResultSet iteration with per-row reflection
- * <li>Cached Handler: Using DefaultResultSetHandlerFactory cache
- * <li>Pre-compiled Accessors: Measuring accessor array vs Map lookup
- * <li>Type Handler Registry: Measuring type conversion overhead
+ *   <li>Naive: Manual ResultSet iteration with per-row reflection
+ *   <li>Cached Handler: Using DefaultResultSetHandlerFactory cache
+ *   <li>Pre-compiled Accessors: Measuring accessor array vs Map lookup
+ *   <li>Type Handler Registry: Measuring type conversion overhead
  * </ol>
  */
 public final class ResultSetHandlerBenchmark {
@@ -134,15 +129,16 @@ public final class ResultSetHandlerBenchmark {
 
     @Override
     public String toString() {
-      return """
-
-          ┌────────────────────────────────────────────────────────────┐
-          │  COMPARISON: %s vs %s
-          └────────────────────────────────────────────────────────────┘
-            Baseline:  %s
-            Optimized: %s
-            Speedup:   %.2fx (%.1f%% improvement)
+      return
           """
+
+┌────────────────────────────────────────────────────────────┐
+│  COMPARISON: %s vs %s
+└────────────────────────────────────────────────────────────┘
+  Baseline:  %s
+  Optimized: %s
+  Speedup:   %.2fx (%.1f%% improvement)
+"""
           .formatted(
               baseline.name,
               optimized.name,
@@ -190,17 +186,18 @@ public final class ResultSetHandlerBenchmark {
     try (Statement stmt = conn.createStatement()) {
       stmt.execute(
           """
-              CREATE TABLE users (
-                  id INTEGER PRIMARY KEY,
-                  first_name VARCHAR(50),
-                  last_name VARCHAR(50),
-                  email VARCHAR(100),
-                  salary DECIMAL(10,2)
-              )
-              """);
+          CREATE TABLE users (
+              id INTEGER PRIMARY KEY,
+              first_name VARCHAR(50),
+              last_name VARCHAR(50),
+              email VARCHAR(100),
+              salary DECIMAL(10,2)
+          )
+          """);
     }
 
-    String sql = "INSERT INTO users (id, first_name, last_name, email, salary) VALUES (?, ?, ?, ?, ?)";
+    String sql =
+        "INSERT INTO users (id, first_name, last_name, email, salary) VALUES (?, ?, ?, ?, ?)";
     conn.setAutoCommit(false);
     try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
       for (int i = 0; i < ROW_COUNT; i++) {
@@ -236,29 +233,33 @@ public final class ResultSetHandlerBenchmark {
     DefaultResultSetHandlerFactory.clearCache();
 
     // Baseline: Create new handler each query (simulates no caching)
-    BenchmarkResult noCache = runBenchmark(
-        "No Cache (new handler)",
-        () -> {
-          try (PreparedStatement pstmt = conn.prepareStatement("SELECT * FROM users");
-              ResultSet rs = pstmt.executeQuery()) {
-            // Create new handler each time (bypass cache)
-            ResultSetHandler<User> handler = DefaultResultSetHandlerFactory.createHandler(User.class, rs.getMetaData());
-            return handler.handleAll(rs).size();
-          }
-        });
+    BenchmarkResult noCache =
+        runBenchmark(
+            "No Cache (new handler)",
+            () -> {
+              try (PreparedStatement pstmt = conn.prepareStatement("SELECT * FROM users");
+                  ResultSet rs = pstmt.executeQuery()) {
+                // Create new handler each time (bypass cache)
+                ResultSetHandler<User> handler =
+                    DefaultResultSetHandlerFactory.createHandler(User.class, rs.getMetaData());
+                return handler.handleAll(rs).size();
+              }
+            });
 
     // Optimized: Use factory cache
     DefaultResultSetHandlerFactory.clearCache(); // Start fresh
-    BenchmarkResult cached = runBenchmark(
-        "Factory Cache",
-        () -> {
-          try (PreparedStatement pstmt = conn.prepareStatement("SELECT * FROM users");
-              ResultSet rs = pstmt.executeQuery()) {
-            // Use cached handler
-            ResultSetHandler<User> handler = DefaultResultSetHandlerFactory.getHandler(User.class, rs.getMetaData());
-            return handler.handleAll(rs).size();
-          }
-        });
+    BenchmarkResult cached =
+        runBenchmark(
+            "Factory Cache",
+            () -> {
+              try (PreparedStatement pstmt = conn.prepareStatement("SELECT * FROM users");
+                  ResultSet rs = pstmt.executeQuery()) {
+                // Use cached handler
+                ResultSetHandler<User> handler =
+                    DefaultResultSetHandlerFactory.getHandler(User.class, rs.getMetaData());
+                return handler.handleAll(rs).size();
+              }
+            });
 
     Comparison comparison = Comparison.of(noCache, cached);
     System.out.println(comparison);
@@ -283,7 +284,8 @@ public final class ResultSetHandlerBenchmark {
     int coldRows;
     try (PreparedStatement pstmt = conn.prepareStatement("SELECT * FROM users");
         ResultSet rs = pstmt.executeQuery()) {
-      ResultSetHandler<User> handler = DefaultResultSetHandlerFactory.getHandler(User.class, rs.getMetaData());
+      ResultSetHandler<User> handler =
+          DefaultResultSetHandlerFactory.getHandler(User.class, rs.getMetaData());
       coldRows = handler.handleAll(rs).size();
     }
     long coldMs = Duration.between(start, Instant.now()).toMillis();
@@ -292,7 +294,8 @@ public final class ResultSetHandlerBenchmark {
     for (int i = 0; i < 50; i++) { // Warm up JIT
       try (PreparedStatement pstmt = conn.prepareStatement("SELECT * FROM users");
           ResultSet rs = pstmt.executeQuery()) {
-        ResultSetHandler<User> handler = DefaultResultSetHandlerFactory.getHandler(User.class, rs.getMetaData());
+        ResultSetHandler<User> handler =
+            DefaultResultSetHandlerFactory.getHandler(User.class, rs.getMetaData());
         handler.handleAll(rs);
       }
     }
@@ -301,7 +304,8 @@ public final class ResultSetHandlerBenchmark {
     int warmRows;
     try (PreparedStatement pstmt = conn.prepareStatement("SELECT * FROM users");
         ResultSet rs = pstmt.executeQuery()) {
-      ResultSetHandler<User> handler = DefaultResultSetHandlerFactory.getHandler(User.class, rs.getMetaData());
+      ResultSetHandler<User> handler =
+          DefaultResultSetHandlerFactory.getHandler(User.class, rs.getMetaData());
       warmRows = handler.handleAll(rs).size();
     }
     long warmMs = Duration.between(start, Instant.now()).toMillis();
