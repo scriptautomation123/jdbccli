@@ -1,609 +1,203 @@
 # JDBC CLI
 
-Copy to User Keybindings (Recommended)
+A command-line tool and library for executing SQL queries and stored procedures against Oracle, PostgreSQL, MySQL, SQL Server, and H2 — with HashiCorp Vault integration for secure credential management.
 
-Press Ctrl+Shift+P (Command Palette)
-Type "Preferences: Open Keyboard Shortcuts (JSON)"
-Copy the contents from keybindings.json into your user keybindings file
+---
 
+## Documentation
 
-A command-line tool and library for executing SQL queries and stored procedures against various databases with HashiCorp Vault integration for secure password management.
+| Doc | Purpose |
+|:----|:--------|
+| [docs/TUTORIAL.md](docs/TUTORIAL.md) | Typed API design rationale and performance walkthrough |
+| [docs/COMPREHENSIVE_TEST_REPORT.md](docs/COMPREHENSIVE_TEST_REPORT.md) | Integration test setup and benchmark results across all databases |
+| [docs/GOOGLE_JAVA_FORMAT_GUIDE.md](docs/GOOGLE_JAVA_FORMAT_GUIDE.md) | Spotless / Google Java Format setup for IDE, CI, and pre-commit |
+| [docs/typed-api-flow.svg](docs/typed-api-flow.svg) | Full call-flow sequence diagram (principal engineer reference) |
+| [docs/typed-api-flow.puml](docs/typed-api-flow.puml) | PlantUML source for the diagram |
 
-## Architecture Overview
+---
+
+## Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                          JdbcCliLibrary (Public API)                     │
-├──────────────────────────────┬──────────────────────────────────────────┤
-│  Typed Query API (NEW)       │  String-Based API (CLI)                  │
-│  • queryForList()            │  • executeSql()                           │
-│  • queryForObject()          │  • executeScript()                        │
-│  Returns: List<T>            │  • executeProcedure()                     │
-│  Performance: optimized      │  Returns: ExecutionResult (String)        │
-└──────────────┬───────────────┴──────────────┬───────────────────────────┘
-               │                              │
-               ▼                              ▼
-┌──────────────────────────┐   ┌──────────────────────────────────────┐
-│   QueryExecutor          │   │   SqlExecutorService                 │
-│   • executeTyped()       │   │   • execute()                        │
-│                          │   │   • executePreparedStatement()       │
-└──────────┬───────────────┘   └──────────┬───────────────────────────┘
-           │                              │
-           ▼                              ▼
-┌──────────────────────────┐   ┌──────────────────────────────────────┐
-│ ResultSetHandler         │   │   SqlJdbcHelper                      │
-│ Framework (Optimized)    │   │   • formatResultSet()                │
-│ • LRU cache (1000)       │   │   Returns: Formatted string table    │
-│ • Accessor arrays O(1)   │   └──────────────────────────────────────┘
-│ • Type handler registry  │
-└──────────┬───────────────┘
-           │
-           ▼
-┌──────────────────────────┐
-│  Typed Domain Objects    │
-│  List<Employee>          │
-│  List<Order>             │
-└──────────────────────────┘
+│                       JdbcCliLibrary  (Public API)                       │
+├────────────────────────────────┬────────────────────────────────────────┤
+│  Typed Query API               │  String-Based API (CLI)                │
+│  queryForList() / queryForObject()  │  executeSql() / executeScript()   │
+│  Returns: List<T>              │  executeProcedure()                    │
+│  Performance: LRU-cached       │  Returns: ExecutionResult (String)     │
+└───────────────┬────────────────┴──────────────┬────────────────────────┘
+                │                               │
+                ▼                               ▼
+┌───────────────────────────┐   ┌──────────────────────────────────────┐
+│  QueryExecutorTyped        │   │  SqlExecutorService                  │
+│  executeTyped()            │   │  execute() / executePreparedStatement│
+└───────────────────────────┘   └──────────────────────────────────────┘
+                │
+                ▼
+┌───────────────────────────────────────────────────────┐
+│  ResultSetHandler Framework                            │
+│  • DefaultResultSetHandlerFactory  (LRU cache ≤1000)  │
+│  • ObjectResultHandler             (accessor array)   │
+│  • TypeHandlerRegistry             (singleton)        │
+│  • TypeHandlerPropertyAccessor     (pre-resolved)     │
+└───────────────────────────────────────────────────────┘
 ```
 
-### Key Components
+See [docs/typed-api-flow.svg](docs/typed-api-flow.svg) for the annotated sequence diagram with code snippets at every layer.
 
-- **QueryExecutor** - Unified query execution with dual modes (typed/formatted)
-- **ResultSetHandler** - High-performance object mapping (see benchmarks in doccs)
-- **SqlJdbcHelper** - Direct ResultSet → String formatting for CLI display
-- **DatabaseExecutionContext** - Connection lifecycle, password resolution, error handling
-- **ProcedureExecutor** - Stored procedure execution with IN/OUT parameters
+---
 
-## Features
+## Key Source Entry Points
 
-- Execute SQL statements and scripts
-- Execute stored procedures with input/output parameters
-- Oracle PL/SQL block support (BEGIN...END with `/` delimiter)
-- HashiCorp Vault integration for password resolution
-- **Multi-database support:** Oracle, PostgreSQL, MySQL, SQL Server, H2
-- **Parameterized integration testing** across all databases via `-Ddatabase` flag
+| Class | Role |
+|:------|:-----|
+| [`JdbcCliLibrary`](database/src/main/java/com/company/app/service/JdbcCliLibrary.java) | Public API surface — entry point for all queries |
+| [`BaseDatabaseCliCommand`](cli/src/main/java/com/company/app/service/cli/BaseDatabaseCliCommand.java) | CLI command wiring, password prompts |
+| [`DatabaseExecutionContext`](database/src/main/java/com/company/app/service/service/DatabaseExecutionContext.java) | Connection lifecycle, password resolution, error handling |
+| [`PasswordResolver`](vault-client/src/main/java/com/company/app/service/auth/PasswordResolver.java) | Vault-based password lookup with interactive fallback |
+| [`VaultClient`](vault-client/src/main/java/com/company/app/service/util/VaultClient.java) | HashiCorp Vault HTTP client |
+| [`ConnectionStringGenerator`](database/src/main/java/com/company/app/service/database/ConnectionStringGenerator.java) | Connection string templates per database type (Oracle JDBC/LDAP, PostgreSQL, MySQL, SQL Server, H2) |
+| [`YamlConfig`](util/src/main/java/com/company/app/service/util/YamlConfig.java) | YAML config loader — filesystem paths only |
+
+---
+
+## Project Structure
+
+```
+jdbccli/
+├── cli/            # PicoCLI command implementations
+├── database/       # JDBC services, typed API, DuckDB experiment
+├── domain/         # Request/response records (sealed types)
+├── util/           # Logging, exception handling, YAML config
+├── vault-client/   # HashiCorp Vault HTTP client
+└── package-helper/ # Fat JAR packaging with bundled JRE
+```
+
+---
 
 ## Quick Start
 
-### Run all tests
+### Run all tests (Docker-based)
 
 ```bash
 cd docker && docker compose down -v && docker compose up -d && cd ..
 ./manage.sh
 ```
 
-### Testcontainers prerequisites (integration tests)
-
-Integration tests use Testcontainers and support multiple databases (PostgreSQL, MySQL, SQL Server, Oracle) parameterized via `-Ddatabase`:
+### Integration tests by database
 
 ```bash
-# PostgreSQL (default, fastest startup)
-mvn test -Dapi.version=1.52 \
+# PostgreSQL (default, fastest)
+mvn test -pl database -Dtest=JdbcCliLibraryIntegrationTest \
+  -Ddatabase=postgres -Dapi.version=1.52 \
   -Dvault.config=/workspaces/jdbccli/cli/src/main/resources/application.yaml \
-  -Djdbccli.password=your_password
+  -Djdbccli.password=test
 
-# MySQL
-mvn test -Ddatabase=mysql -Dapi.version=1.52 \
-  -Dvault.config=/workspaces/jdbccli/cli/src/main/resources/application.yaml \
-  -Djdbccli.password=your_password
-
-# SQL Server
-mvn test -Ddatabase=sqlserver -Dapi.version=1.52 \
-  -Dvault.config=/workspaces/jdbccli/cli/src/main/resources/application.yaml \
-  -Djdbccli.password=your_password
-
-# Oracle (longer startup ~2-3 minutes on first run)
-mvn test -Ddatabase=oracle -Dapi.version=1.52 \
-  -Dvault.config=/workspaces/jdbccli/cli/src/main/resources/application.yaml \
-  -Djdbccli.password=your_password
+# MySQL / SQL Server / Oracle — same flags, change -Ddatabase=mysql|sqlserver|oracle
 ```
 
-**Requirements:**
-- Docker daemon must be reachable
-- Docker API version ≥1.44 (use `-Dapi.version=1.52` if negotiation fails)
-- See [COMPREHENSIVE_TEST_REPORT.md](doccs/COMPREHENSIVE_TEST_REPORT.md) for detailed testing instructions
+See [docs/COMPREHENSIVE_TEST_REPORT.md](docs/COMPREHENSIVE_TEST_REPORT.md) for full matrix, benchmark commands, and Testcontainers prerequisites.
 
-### Interactive Mode
+### Interactive mode
 
 ```bash
 ./manage.sh -i
 ```
 
-### Available Commands
+### manage.sh reference
 
 ```bash
-./manage.sh --help           # Show all options
-./manage.sh --spotless       # Format code & commit
-./manage.sh --sbom           # Generate SBOM dependency report
-./manage.sh --build          # Build project only
-./manage.sh --refresh        # Refresh Oracle DB before tests
+./manage.sh             # Run tests
+./manage.sh --build     # Build only
+./manage.sh --spotless  # Format code and commit
+./manage.sh --sbom      # Generate SBOM
+./manage.sh --refresh   # Refresh Oracle DB before tests
 ./manage.sh --migrate-pkg OLD NEW  # Migrate package paths
 ```
 
-### Generate SBOM
+---
+
+## Configuration
+
+### Vault config
+
+Pass as a system property pointing to a filesystem YAML file:
 
 ```bash
-# Aggregate SBOM for all modules
-mvn cyclonedx:makeAggregateBom
-
-# Or generate SBOM for individual modules
-mvn cyclonedx:makeBom
+-Dvault.config=/path/to/application.yaml
 ```
 
-### SBOM Dependency Report
-
-Generate a visual report of dependencies, transitive dependencies, and version conflicts:
+### Avoid blocking password prompts in automation
 
 ```bash
-# First generate the SBOM
-mvn cyclonedx:makeAggregateBom
+# System property
+-Djdbccli.password=your_password
 
-# Then run the report generator
-mvn compile -pl util -q
+# Environment variable
+JDBCCLI_PASSWORD=your_password mvn test
+```
+
+---
+
+## CLI Usage
+
+### Basic SQL
+
+```bash
+cd package-helper/target/dist/cli-1.0.0
+./jre/bin/java \
+  -Dlog4j.configurationFile=file:./log4j2.xml \
+  -Dvault.config=./vaults.yaml \
+  -Djdbccli.password=your_password \
+  -jar ./cli-1.0.0.jar exec-sql "SELECT * FROM hr.employees WHERE rownum <= 5" \
+  --type oracle --database localhost:1521:xe --user hr
+```
+
+Supported `--type` values: `oracle` `postgresql` `mysql` `sqlserver` `h2`
+
+### Stored procedure
+
+```bash
+./jre/bin/java ... -jar ./cli-1.0.0.jar exec-proc hr.get_employee_details \
+  --input  "p_employee_id:NUMBER:100" \
+  --output "o_first_name:VARCHAR2,o_last_name:VARCHAR2,o_salary:NUMBER" \
+  --type oracle --database localhost:1521:xe --user hr
+```
+
+---
+
+## Code Formatting
+
+Uses **Google Java Format v1.21.0** via **Spotless v2.44.0**.
+
+```bash
+mvn spotless:apply   # fix all files
+mvn spotless:check   # CI check (fails on violations)
+```
+
+See [docs/GOOGLE_JAVA_FORMAT_GUIDE.md](docs/GOOGLE_JAVA_FORMAT_GUIDE.md) for IDE setup (VS Code / IntelliJ / Eclipse), pre-commit hook, and CI pipeline integration.
+
+---
+
+## Java 21 Features
+
+| Feature | Where used |
+|:--------|:-----------|
+| Sealed interfaces | `DbRequest` permits `SqlRequest`, `ProcedureRequest` |
+| Records | Immutable request/response types with fluent withers |
+| Pattern-matching switch | `TypedSqlExecutorService` dispatch |
+| Virtual threads | `VaultClient` I/O, `DatabaseExecutionContext` |
+| Text blocks | Multi-line SQL in tests |
+
+---
+
+## SBOM
+
+```bash
+mvn cyclonedx:makeAggregateBom
 java -cp util/target/classes \
   com.company.app.service.util.SbomReportGenerator target/sbom.xml
 ```
 
-**Report includes:**
-
-- 📊 Summary of internal modules vs external libraries
-- ⚠️ Version conflict detection with recommendations
-- 🌳 Dependency tree with transitive dependencies
-- 📜 License summary for compliance review
-- 📚 External dependencies table
-
-Example output:
-
-```text
-╔══════════════════════════════════════════════════════════════════╗
-║                    SBOM DEPENDENCY REPORT                        ║
-╚══════════════════════════════════════════════════════════════════╝
-
-📄 Source: target/sbom.xml
-📊 Total Components: 17
-
-│ 🏠 Internal Modules:      7                                     │
-│ 📦 External Libraries:   10                                     │
-
-🌳 DEPENDENCY TREE
-📦 🏠 cli-parent:1.0.0
-  ├── 🏠 cli-domain:1.0.0
-  ├── 🏠 cli-util:1.0.0
-    ├── 📚 log4j-api:2.25.3
-    ├── 📚 jackson-databind:2.19.2
-    ...
-```
-
----
-
-## DuckDB Experimentation (Analytics)
-
-The project includes DuckDB support for experimenting with columnar analytics as an alternative to traditional JDBC for certain workloads.
-
-### When to Use DuckDB vs Oracle JDBC
-
-| Use Case                         | Recommendation |
-| :------------------------------- | :------------- |
-| Oracle production data           | JDBC           |
-| Stored procedures                | JDBC only      |
-| Local analytics on files         | DuckDB         |
-| Large aggregations (>100K rows)  | DuckDB         |
-| Query CSV/Parquet directly       | DuckDB         |
-
-### Run DuckDB Benchmark
-
-Compare DuckDB vs traditional row-store (H2) performance:
-
-```bash
-cd database
-mvn test-compile exec:java \
-  -Dexec.mainClass="com.company.app.service.database.DuckDbExperiment" \
-  -Dexec.classpathScope=test
-```
-
-### Query Files Directly with DuckDB
-
-```bash
-# Query a CSV file
-mvn test-compile exec:java \
-  -Dexec.mainClass="com.company.app.service.database.DuckDbExperiment" \
-  -Dexec.classpathScope=test \
-  -Dexec.args="csv:/path/to/data.csv"
-
-# Query a Parquet file
-mvn test-compile exec:java \
-  -Dexec.mainClass="com.company.app.service.database.DuckDbExperiment" \
-  -Dexec.classpathScope=test \
-  -Dexec.args="parquet:/path/to/data.parquet"
-```
-
-### DuckDB in Code
-
-```java
-// In-memory DuckDB
-try (Connection conn = DuckDbExperiment.createConnection()) {
-    // Query Parquet directly - no ETL needed!
-    ExecutionResult result = DuckDbExperiment.execute(conn,
-        "SELECT * FROM read_parquet('data.parquet') WHERE amount > 100");
-}
-
-// Or use standard JDBC
-try (Connection conn = DriverManager.getConnection("jdbc:duckdb:")) {
-    // Works with existing SqlJdbcHelper
-    ResultSet rs = stmt.executeQuery("SELECT * FROM read_csv_auto('data.csv')");
-    ExecutionResult result = SqlJdbcHelper.formatResultSet(rs);
-}
-```
-
----
-
-## CLI Usage Examples
-
-### Multi-Database Support
-
-The CLI supports multiple database types with consistent syntax:
-
-```bash
-# Oracle
-jdbccli exec-sql "SELECT * FROM employees" \
-  --type oracle --database localhost:1521:xe --user hr
-
-# PostgreSQL
-jdbccli exec-sql "SELECT * FROM employees LIMIT 10" \
-  --type postgresql --database localhost:5432:mydb --user postgres
-
-# MySQL
-jdbccli exec-sql "SELECT * FROM employees LIMIT 10" \
-  --type mysql --database localhost:3306:mydb --user root
-
-# SQL Server
-jdbccli exec-sql "SELECT TOP 10 * FROM employees" \
-  --type sqlserver --database localhost:1433:mydb --user sa
-
-# H2 (in-memory testing)
-jdbccli exec-sql "SELECT * FROM employees" \
-  --type h2 --database testdb --user sa
-```
-
-### 0. Execute basic SQL query (Oracle)
-
-```bash
-cd ~/code/scriptautomation123/jdbccli/package-helper/target/dist/cli-1.0.0 &&\
-./jre/bin/java \
--Dlog4j.configurationFile=file:./log4j2.xml \
--Dvault.config=./vaults.yaml \
--Djdbccli.password=your_password \
--jar ./cli-1.0.0.jar exec-sql "SELECT * FROM hr.employees WHERE rownum <= 5" \
---type oracle \
---database localhost:1521:xe \
---user hr
-```
-
-### 1. Get employee salary (use SQL, not procedure)
-
-```bash
-cd ~/code/scriptautomation123/jdbccli/package-helper/target/dist/cli-1.0.0 &&\
-./jre/bin/java \
--Dlog4j.configurationFile=file:./log4j2.xml \
--Dvault.config=./vaults.yaml \
--Djdbccli.password=your_password \
--jar ./cli-1.0.0.jar exec-sql "SELECT hr.hr_pkg.get_employee_salary(100) as salary FROM dual" \
---type oracle \
---database localhost:1521:xe \
---user hr
-```
-
-### 2. Get department budget (use SQL)
-
-```bash
-cd ~/code/scriptautomation123/jdbccli/package-helper/target/dist/cli-1.0.0 &&\
-./jre/bin/java \
--Dlog4j.configurationFile=file:./log4j2.xml \
--Dvault.config=./vaults.yaml \
--Djdbccli.password=your_password \
--jar ./cli-1.0.0.jar exec-sql "SELECT hr.hr_pkg.get_department_budget(80) as budget FROM dual" \
---type oracle \
---database localhost:1521:xe \
---user hr
-```
-
-### 3. Calculate bonus (use SQL)
-
-```bash
-cd ~/code/scriptautomation123/jdbccli/package-helper/target/dist/cli-1.0.0 &&\
-./jre/bin/java \
--Dlog4j.configurationFile=file:./log4j2.xml \
--Dvault.config=./vaults.yaml \
--Djdbccli.password=your_password \
--jar ./cli-1.0.0.jar exec-sql "SELECT hr.calculate_bonus(10000, 15) as bonus FROM dual" \
---type oracle \
---database localhost:1521:xe \
---user hr
-```
-
-### 4. Get employee details (procedure with input parameter)
-
-```bash
-cd ~/code/scriptautomation123/jdbccli/package-helper/target/dist/cli-1.0.0 &&\
-./jre/bin/java \
--Dlog4j.configurationFile=file:./log4j2.xml \
--Dvault.config=./vaults.yaml \
--Djdbccli.password=your_password \
--jar ./cli-1.0.0.jar exec-proc hr.get_employee_details \
---input "p_employee_id:NUMBER:100" \
---output "o_first_name:VARCHAR2,o_last_name:VARCHAR2,o_email:VARCHAR2,o_salary:NUMBER,o_job_id:VARCHAR2" \
---type oracle \
---database localhost:1521:xe \
---user hr
-```
-
-### 5. Get department info (procedure with input parameter)
-
-```bash
-cd ~/code/scriptautomation123/jdbccli/package-helper/target/dist/cli-1.0.0 &&\
-./jre/bin/java \
--Dlog4j.configurationFile=file:./log4j2.xml \
--Dvault.config=./vaults.yaml \
--Djdbccli.password=your_password \
--jar ./cli-1.0.0.jar exec-proc hr.get_department_info \
---input "p_department_id:NUMBER:80" \
---output "o_department_name:VARCHAR2,o_manager_id:NUMBER,o_employee_count:NUMBER,o_total_salary:NUMBER" \
---type oracle \
---database localhost:1521:xe \
---user hr
-```
-
-### 6. Raise employee salary (package procedure with multiple inputs)
-
-```bash
-cd ~/code/scriptautomation123/jdbccli/package-helper/target/dist/cli-1.0.0 &&\
-./jre/bin/java \
--Dlog4j.configurationFile=file:./log4j2.xml \
--Dvault.config=./vaults.yaml \
--Djdbccli.password=your_password \
--jar ./cli-1.0.0.jar exec-proc hr.hr_pkg.raise_employee_salary \
---input "p_employee_id:NUMBER:100,p_raise_percent:NUMBER:10" \
---type oracle \
---database localhost:1521:xe \
---user hr
-```
-
-### 7. Hire new employee (package procedure with 6 input parameters)
-
-```bash
-cd ~/code/scriptautomation123/jdbccli/package-helper/target/dist/cli-1.0.0 &&\
-./jre/bin/java \
--Dlog4j.configurationFile=file:./log4j2.xml \
--Dvault.config=./vaults.yaml \
--Djdbccli.password=your_password \
--jar ./cli-1.0.0.jar exec-proc hr.hr_pkg.hire_employee \
---input "p_first_name:VARCHAR2:John,p_last_name:VARCHAR2:Doe,p_email:VARCHAR2:jdoe@example.com,p_job_id:VARCHAR2:IT_PROG,p_salary:NUMBER:8000,p_department_id:NUMBER:60" \
---type oracle \
---database localhost:1521:xe \
---user hr
-```
-
-### 8. Update job history (package procedure with 3 input parameters)
-
-```bash
-cd ~/code/scriptautomation123/jdbccli/package-helper/target/dist/cli-1.0.0 &&\
-./jre/bin/java \
--Dlog4j.configurationFile=file:./log4j2.xml \
--Dvault.config=./vaults.yaml \
--Djdbccli.password=your_password \
--jar ./cli-1.0.0.jar exec-proc hr.hr_pkg.update_job_history \
---input "p_employee_id:NUMBER:100,p_new_job_id:VARCHAR2:AD_VP,p_new_department_id:NUMBER:90" \
---type oracle \
---database localhost:1521:xe \
---user hr
-```
-
-### 9. Terminate employee (package procedure with 1 input parameter)
-
-```bash
-cd ~/code/scriptautomation123/jdbccli/package-helper/target/dist/cli-1.0.0 &&\
-./jre/bin/java \
--Dlog4j.configurationFile=file:./log4j2.xml \
--Dvault.config=./vaults.yaml \
--Djdbccli.password=your_password \
--jar ./cli-1.0.0.jar exec-proc hr.hr_pkg.terminate_employee \
---input "p_employee_id:NUMBER:100" \
---type oracle \
---database localhost:1521:xe \
---user hr
-
-### Non-interactive password override
-
-Use these when running tests or automation to avoid blocking prompts:
-
-```bash
-# System property
-mvn -Djdbccli.password=your_password test
-
-# Or environment variable
-JDBCCLI_PASSWORD=your_password mvn test
-```
-```
-
----
-
-## Project Structure
-
-```text
-jdbccli/
-├── cli/           # PicoCLI command implementations
-├── database/      # JDBC services, DuckDB experiment
-├── domain/        # Request/response records (sealed types)
-├── util/          # Logging, exception handling, YAML config
-├── vault-client/  # HashiCorp Vault HTTP client
-└── package-helper/# Fat JAR packaging with JRE
-```
-
-## Java 21 Features Used
-
-- **Sealed interfaces** - `DbRequest` permits only `SqlRequest`, `ProcedureRequest`
-- **Records with withers** - Immutable fluent API for request building
-- **Pattern matching** - Switch expressions with type patterns
-- **Virtual threads** - Used in VaultClient for I/O operations
-- **Text blocks** - Multi-line SQL in code
-
-## Architecture Highlights
-
-- **ConnectionStringGenerator** - Strategy pattern for multi-database support (Oracle JDBC/LDAP, PostgreSQL, MySQL, SQL Server, H2)
-- **ScriptParser** - Handles Oracle PL/SQL blocks (BEGIN...END with `/`)
-- **ResultFormatter** - Abstraction point for future Arrow Flight SQL
-- **DatabaseExecutionContext** - Composition over inheritance for DB operations
-
----
-
-## Code Formatting (Google Java Format)
-
-The project uses **Google Java Format v1.21.0** via **Spotless Maven Plugin v2.44.0** for consistent code style across all 24 Java source files (3,717 lines).
-
-### Quick Commands
-
-```bash
-# Apply formatting to all files
-mvn spotless:apply
-
-# Check formatting compliance (CI/CD)
-mvn spotless:check
-
-# Format only modified files (faster)
-mvn spotless:apply -DspotlessFollow=true
-
-# Format specific module only
-mvn -pl database spotless:apply
-mvn -pl cli spotless:apply
-```
-
-### Formatting Rules
-
-**Configuration:** `pom.xml` (parent module)
-
-```xml
-<java>
-    <googleJavaFormat>
-        <version>1.21.0</version>
-        <style>GOOGLE</style>  <!-- or AOSP for 4-space indent -->
-        <reflowLongStrings>true</reflowLongStrings>
-    </googleJavaFormat>
-    <trimTrailingWhitespace/>
-    <endWithNewline/>
-    <importOrder>
-        <order>java,javax,org,com</order>
-        <wildcardsLast>true</wildcardsLast>
-    </importOrder>
-    <removeUnusedImports/>
-</java>
-```
-
-| Rule                | Setting                            |
-| :------------------ | :--------------------------------- |
-| Indentation         | 2 spaces (GOOGLE) / 4 spaces (AOSP) |
-| Line length         | 100 characters                     |
-| Import order        | `java` → `javax` → `org` → `com`   |
-| Wildcard imports    | Last                               |
-| Trailing whitespace | Removed                            |
-| Unused imports      | Removed                            |
-| File endings        | Newline added                      |
-
-### IDE Integration
-
-#### VS Code
-
-1. Install [Google Java Format](https://marketplace.visualstudio.com/items?itemName=joseandrade.google-java-format-for-vs-code) extension
-2. Add to `settings.json`:
-```json
-{
-  "[java]": {
-    "editor.defaultFormatter": "joseandrade.google-java-format-for-vs-code",
-    "editor.formatOnSave": true
-  }
-}
-```
-
-#### IntelliJ IDEA
-
-1. Install "Google Java Format" plugin (Settings → Plugins)
-2. Enable: Settings → Editor → Code Style → Scheme → "Google Style"
-3. Optional: Settings → Tools → Actions on Save → "Reformat code"
-
-#### Eclipse
-
-Install **google-java-format** from Eclipse Marketplace
-
-### Before Committing
-
-```bash
-# Format and verify
-mvn spotless:apply && mvn spotless:check
-
-# Then commit
-git add -A && git commit -m "Your message"
-```
-
-### Pre-commit Hook (Optional)
-
-Create `.git/hooks/pre-commit`:
-```bash
-#!/bin/bash
-mvn spotless:check
-if [ $? -ne 0 ]; then
-    echo "❌ Code formatting issues detected."
-    echo "Run: mvn spotless:apply"
-    exit 1
-fi
-```
-
-Make executable: `chmod +x .git/hooks/pre-commit`
-
-### CI/CD Integration
-
-```bash
-# In your build pipeline
-mvn spotless:check  # Fail build on violations
-
-# Or auto-fix (optional)
-mvn spotless:apply && git diff --exit-code
-```
-
-### Troubleshooting
-
-| Issue | Solution |
-|-------|----------|
-| Plugin fails | `mvn clean install && mvn spotless:apply` |
-| Too many files | `mvn spotless:apply -DspotlessFollow=true` |
-| IDE differs | Ensure Google Java Format extension installed |
-| Import order changes | Check `<order>java,javax,org,com</order>` in pom.xml |
-
-### Example Transformation
-
-**Before:**
-```java
-import java.util.*;import com.company.app.service.util.*;
-public class MyClass {
-public void method1(String a,String b){
-LOGGER.info("event="+a);}
-}
-```
-
-**After (Google Java Format):**
-```java
-import java.util.List;
-
-import com.company.app.service.util.ExceptionUtils;
-
-public class MyClass {
-
-  public void method1(String a, String b) {
-    LOGGER.info("event={}", a);
-  }
-}
-```
-
-### Resources
-
-- [Google Java Style Guide](https://google.github.io/styleguide/javaguide.html)
-- [Spotless Maven Plugin](https://github.com/diffplug/spotless/tree/main/plugin-maven)
-- See [GOOGLE_JAVA_FORMAT_GUIDE.md](GOOGLE_JAVA_FORMAT_GUIDE.md) for advanced configuration
+Output includes dependency tree, version conflict detection, and license summary.

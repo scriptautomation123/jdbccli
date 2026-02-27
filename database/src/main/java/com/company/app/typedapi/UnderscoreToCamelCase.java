@@ -1,4 +1,4 @@
-package com.company.app.service.database.typedapi;
+package com.company.app.typedapi;
 
 /**
  * Utility class for converting underscore_case strings to camelCase.

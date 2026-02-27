@@ -7,10 +7,10 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 
-import com.company.app.service.database.typedapi.DefaultResultSetHandlerFactory;
-import com.company.app.service.database.typedapi.ResultSetHandler;
-import com.company.app.service.database.typedapi.TypeHandlerRegistry;
-import com.company.app.service.database.typedapi.UnderscoreToCamelCase;
+import com.company.app.typedapi.DefaultResultSetHandlerFactory;
+import com.company.app.typedapi.ResultSetHandler;
+import com.company.app.typedapi.TypeHandlerRegistry;
+import com.company.app.typedapi.UnderscoreToCamelCase;
 
 /**
  * Unit tests for the ResultSetHandler optimization framework.

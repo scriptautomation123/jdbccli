@@ -15,8 +15,12 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
+import com.company.app.stringapi.QueryExecutor;
+import com.company.app.typedapi.QueryExecutorTyped;
+
 /**
- * Unit tests for QueryExecutor using in-memory H2 database. Tests typed and formatted execution
+ * Unit tests for QueryExecutor using in-memory H2 database. Tests typed and
+ * formatted execution
  * modes without Testcontainers.
  */
 @DisplayName("QueryExecutor")
@@ -33,24 +37,24 @@ class QueryExecutorTest {
     try (Statement stmt = connection.createStatement()) {
       stmt.execute(
           """
-          CREATE TABLE employees (
-            id INTEGER PRIMARY KEY,
-            first_name VARCHAR(50),
-            last_name VARCHAR(50),
-            email VARCHAR(100),
-            salary DECIMAL(10, 2),
-            hire_date DATE
-          )
-          """);
+              CREATE TABLE employees (
+                id INTEGER PRIMARY KEY,
+                first_name VARCHAR(50),
+                last_name VARCHAR(50),
+                email VARCHAR(100),
+                salary DECIMAL(10, 2),
+                hire_date DATE
+              )
+              """);
 
       // Insert test data
       stmt.execute(
           """
-          INSERT INTO employees VALUES
-          (1, 'Alice', 'Smith', 'alice@example.com', 75000.00, '2020-01-15'),
-          (2, 'Bob', 'Jones', 'bob@example.com', 65000.00, '2021-03-20'),
-          (3, 'Charlie', 'Brown', 'charlie@example.com', 85000.00, '2019-11-10')
-          """);
+              INSERT INTO employees VALUES
+              (1, 'Alice', 'Smith', 'alice@example.com', 75000.00, '2020-01-15'),
+              (2, 'Bob', 'Jones', 'bob@example.com', 65000.00, '2021-03-20'),
+              (3, 'Charlie', 'Brown', 'charlie@example.com', 85000.00, '2019-11-10')
+              """);
     }
   }
 
@@ -131,7 +135,7 @@ class QueryExecutorTest {
       String sql = "SELECT * FROM employees ORDER BY id";
 
       // When
-      var result = QueryExecutor.executeTyped(connection, sql, List.of(), Employee.class);
+      var result = QueryExecutorTyped.executeTyped(connection, sql, List.of(), Employee.class);
 
       // Then
       assertThat(result.data()).hasSize(3);
@@ -152,7 +156,7 @@ class QueryExecutorTest {
       String sql = "SELECT * FROM employees WHERE id = ?";
 
       // When
-      var result = QueryExecutor.executeTyped(connection, sql, List.of(2), Employee.class);
+      var result = QueryExecutorTyped.executeTyped(connection, sql, List.of(2), Employee.class);
 
       // Then
       assertThat(result.data()).hasSize(1);
@@ -168,9 +172,8 @@ class QueryExecutorTest {
       String sql = "SELECT * FROM employees WHERE salary > ? AND hire_date < ?";
 
       // When
-      var result =
-          QueryExecutor.executeTyped(
-              connection, sql, List.of(70000, java.sql.Date.valueOf("2021-01-01")), Employee.class);
+      var result = QueryExecutorTyped.executeTyped(
+          connection, sql, List.of(70000, java.sql.Date.valueOf("2021-01-01")), Employee.class);
 
       // Then
       assertThat(result.data()).hasSize(2); // Alice and Charlie
@@ -186,7 +189,7 @@ class QueryExecutorTest {
       String sql = "SELECT * FROM employees WHERE id = ?";
 
       // When
-      var result = QueryExecutor.executeTyped(connection, sql, List.of(999), Employee.class);
+      var result = QueryExecutorTyped.executeTyped(connection, sql, List.of(999), Employee.class);
 
       // Then
       assertThat(result.data()).isEmpty();
@@ -202,7 +205,7 @@ class QueryExecutorTest {
       String sql = "SELECT first_name, last_name FROM employees WHERE id = 1";
 
       // When
-      var result = QueryExecutor.executeTyped(connection, sql, List.of(), Employee.class);
+      var result = QueryExecutorTyped.executeTyped(connection, sql, List.of(), Employee.class);
 
       // Then
       Employee alice = result.first();
@@ -217,7 +220,7 @@ class QueryExecutorTest {
       String sql = "SELECT salary, hire_date FROM employees WHERE id = 1";
 
       // When
-      var result = QueryExecutor.executeTyped(connection, sql, List.of(), Employee.class);
+      var result = QueryExecutorTyped.executeTyped(connection, sql, List.of(), Employee.class);
 
       // Then
       Employee alice = result.first();
@@ -234,7 +237,7 @@ class QueryExecutorTest {
       // When - execute same query multiple times
       long start = System.nanoTime();
       for (int i = 0; i < 100; i++) {
-        QueryExecutor.executeTyped(connection, sql, List.of(1), Employee.class);
+        QueryExecutorTyped.executeTyped(connection, sql, List.of(1), Employee.class);
       }
       long cacheTime = System.nanoTime() - start;
 
@@ -306,7 +309,7 @@ class QueryExecutorTest {
 
       // When/Then
       assertThatThrownBy(
-              () -> QueryExecutor.executeTyped(connection, invalidSql, List.of(), Employee.class))
+          () -> QueryExecutorTyped.executeTyped(connection, invalidSql, List.of(), Employee.class))
           .isInstanceOf(SQLException.class);
     }
 
@@ -318,7 +321,7 @@ class QueryExecutorTest {
 
       // When/Then - only providing 1 parameter when 2 are needed
       assertThatThrownBy(
-              () -> QueryExecutor.executeTyped(connection, sql, List.of(1), Employee.class))
+          () -> QueryExecutorTyped.executeTyped(connection, sql, List.of(1), Employee.class))
           .isInstanceOf(SQLException.class);
     }
 
@@ -329,7 +332,7 @@ class QueryExecutorTest {
       String sql = "SELECT * FROM employees";
 
       // When - params can be null or empty
-      var result = QueryExecutor.executeTyped(connection, sql, null, Employee.class);
+      var result = QueryExecutorTyped.executeTyped(connection, sql, null, Employee.class);
 
       // Then - should work fine
       assertThat(result.data()).isNotEmpty();
@@ -348,13 +351,13 @@ class QueryExecutorTest {
 
       // Warmup
       for (int i = 0; i < 10; i++) {
-        QueryExecutor.executeTyped(connection, sql, List.of(), Employee.class);
+        QueryExecutorTyped.executeTyped(connection, sql, List.of(), Employee.class);
       }
 
       // Measure typed
       long start = System.nanoTime();
       for (int i = 0; i < iterations; i++) {
-        QueryExecutor.executeTyped(connection, sql, List.of(), Employee.class);
+        QueryExecutorTyped.executeTyped(connection, sql, List.of(), Employee.class);
       }
       long typedTime = System.nanoTime() - start;
 

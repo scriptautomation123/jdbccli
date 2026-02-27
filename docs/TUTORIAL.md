@@ -1,8 +1,6 @@
-# ResultSet-to-Bean Mapping: A Performance Optimization Journey
+# ResultSet-to-Bean Mapping: Performance Optimization
 
-## From Reflection Hell to Near-Native Speed
-
-This tutorial explains the optimization path and why each step matters. Performance numbers are illustrative; run the JMH benchmarks in this repo for current measurements.
+Illustrates the full optimization path from naive reflection to the production-ready implementation used in this codebase. Performance numbers are illustrative — run the JMH benchmarks in this repo for current measurements.
 
 ---
 
@@ -22,9 +20,7 @@ This tutorial explains the optimization path and why each step matters. Performa
 
 ## The Problem: Why ResultSet Mapping is Slow {#the-problem}
 
-**Student Question:** "Why not just use `rs.getString("column_name")` everywhere?"
-
-**Principal Engineer:** "Let's measure the cost of a typical ORM operation:"
+The per-row cost of a typical hand-written mapping loop:
 
 ```java
 // Typical hand-written mapping (what you write)
@@ -55,8 +51,6 @@ List<User> users = handler.handleAll(rs);
 ---
 
 ## Lesson 0: The Naive Approach (Baseline) {#lesson-0-naive-approach}
-
-**Principal Engineer:** "Let's start with the most obvious implementation. This is what a junior engineer might write."
 
 ### Implementation: Naive Reflection-Based Mapper
 
@@ -105,9 +99,7 @@ public class NaiveResultSetMapper<T> {
 
 ## Lesson 1: Eliminating Repeated Reflection {#lesson-1-cache-reflection}
 
-**Student:** "Can't we just cache the reflection results?"
-
-**Principal Engineer:** "Exactly! Let's cache the Method objects."
+The fix is to compute `Method` objects once per query shape and reuse them.
 
 ### Pattern: Pre-computed Accessor
 
@@ -216,9 +208,7 @@ Improvement: 6.2x faster (84% reduction)
 
 ## Lesson 2: From Maps to Arrays (O(n) → O(1)) {#lesson-2-arrays-over-maps}
 
-**Student:** "We're still doing `rs.getObject()` and type casting. Can we optimize that?"
-
-**Principal Engineer:** "Yes! Two optimizations: 1) Array indexing over maps, 2) Type-specific getters"
+Two further gains are available: replace map lookups with direct array indexing, and replace `rs.getObject()` with type-specific JDBC getters.
 
 ### Pattern: Pre-compiled Accessor Array
 
@@ -338,10 +328,6 @@ Improvement: 2.2x faster (54% reduction from cached reflection)
 
 ## Lesson 3: Type Handler Registry {#lesson-3-type-handler-registry}
 
-**Student:** "Why do we need a TypeHandler? Can't we just use `rs.getObject()`?"
-
-**Principal Engineer:** "Let me show you the problem with `getObject()`:"
-
 ### The Problem with getObject()
 
 ```java
@@ -443,9 +429,7 @@ Improvement: 1.26x faster (26% reduction)
 
 ## Lesson 4: String Optimization {#lesson-4-string-optimization}
 
-**Student:** "What about `user_name` → `userName` conversion? That's just a string operation, right?"
-
-**Principal Engineer:** "String operations are deceptively expensive. Let's measure:"
+Column-name-to-property-name conversion (`user_name` → `userName`) happens once per column per handler build. Even so, the naive implementation is surprisingly costly — worth optimizing before it compounds.
 
 ### The Naive Approach
 
@@ -552,9 +536,7 @@ Improvement: 3.9x faster (75% reduction)
 
 ## Lesson 5: Bounded Cache (Production-Ready) {#lesson-5-bounded-cache}
 
-**Student:** "If caching is so great, why not cache everything?"
-
-**Principal Engineer:** "That's the #1 mistake in production. Let me show you the memory leak:"
+Unbounded caches are the most common production mistake with this pattern. Dynamic queries with unique column sets create unbounded key spaces.
 
 ### The Memory Leak Problem
 
@@ -951,51 +933,37 @@ Performance Summary:
 
 ---
 
-## Key Takeaways for Engineering Teams
+## Key Decisions
 
-### What to Remember
-
-1. **Measure First**: Always establish a baseline before optimizing
-2. **Cache Strategically**: Cache expensive computations, but bound the cache
-3. **Data Structures Matter**: O(1) array access vs O(log n) map lookup compounds over millions of rows
-4. **Type Safety**: Generic `getObject()` hides performance and correctness issues
-5. **String Operations**: They're more expensive than you think
+1. **Measure first** — establish a baseline before optimizing
+2. **Bound every cache** — dynamic queries create unbounded key spaces; always set a max
+3. **Arrays over maps for hot paths** — O(1) array access vs O(log n) map lookup compounds across millions of rows
+4. **Type-specific JDBC getters** — `getObject()` hides `NullPointerException` risks on primitives and loses type precision
+5. **String operations cost more than expected** — single-pass char array beats regex + `StringBuilder` split by ~4x
 
 ### When to Apply These Patterns
 
-✅ **Use this approach when:**
-
-- Mapping 1000+ rows per query
-- Running queries in tight loops
-- Building ORM layers or data access frameworks
-- Long-running applications with dynamic queries
-
-❌ **Don't overcomplicate when:**
-
-- Querying < 100 rows total
-- One-off scripts or migrations
-- Prototyping (optimize later if needed)
+| Scenario | Recommendation |
+| -------- | -------------- |
+| Mapping 1 000+ rows per query | Use full pipeline |
+| Queries in tight application loops | Use full pipeline |
+| Building a shared data-access library | Use full pipeline |
+| < 100 rows, one-off script | Hand-map; don't over-engineer |
+| Prototyping | Hand-map; optimize later if it shows in profiler |
 
 ### Production Checklist
 
-- [ ] Bounded cache (prevent memory leaks)
-- [ ] Null validation on public APIs
-- [ ] Logging for type conversion errors
-- [ ] Thread-safe shared state
-- [ ] Graceful degradation (no-op accessors for missing columns)
-- [ ] JMH benchmarks in CI pipeline
+- [ ] Cache is bounded (`MAX_CACHE_SIZE` configured)
+- [ ] Null validation on public API entry points
+- [ ] `TypeHandler` registered for every property type used
+- [ ] `synchronized` or concurrent wrapper on shared cache
+- [ ] No-op / warn path for columns with no matching setter
+- [ ] JMH benchmarks gate performance regressions in CI
 
 ---
 
-## Further Reading
+## References
 
-1. **Effective Java (Joshua Bloch)** - Item 55: Return optionals judiciously
-2. **Java Performance (Scott Oaks)** - Chapter 4: Working with Collections
-3. **JMH Documentation** - https://github.com/openjdk/jmh
-4. **JDBC Specification** - Understanding ResultSet performance characteristics
-
----
-
-**End of Tutorial**
-
-_Questions? Open an issue or contact the performance engineering team._
+- [JMH Documentation](https://github.com/openjdk/jmh)
+- [Google Java Style Guide](https://google.github.io/styleguide/javaguide.html)
+- [JDBC ResultSet API](https://docs.oracle.com/en/java/docs/books/jdbc/jdbc-spec-ch9.html)

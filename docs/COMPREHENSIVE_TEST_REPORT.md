@@ -1,4 +1,4 @@
-# Test Suite Report (Current)
+# Test Suite Reference
 
 ## Scope
 
@@ -12,7 +12,18 @@ This report summarizes the test coverage and how to run the suite. It avoids har
 
 ## Multi-Database Integration Testing
 
-The integration test suite is parameterized to run against multiple database engines using the `-Ddatabase` system property:
+The integration test suite is parameterized via `-Ddatabase`. Omitting it defaults to PostgreSQL.
+
+```bash
+# Replace <db> with: postgres (default) | mysql | sqlserver | oracle
+mvn test -pl database -Dtest=JdbcCliLibraryIntegrationTest \
+  -Ddatabase=<db> \
+  -Dapi.version=1.52 \
+  -Dvault.config=/workspaces/jdbccli/cli/src/main/resources/application.yaml \
+  -Djdbccli.password=test
+```
+
+**Concrete per-database commands:**
 
 ```bash
 # PostgreSQL (default, fastest startup)
@@ -33,14 +44,12 @@ mvn test -pl database -Dtest=JdbcCliLibraryIntegrationTest -Ddatabase=sqlserver 
   -Dvault.config=/workspaces/jdbccli/cli/src/main/resources/application.yaml \
   -Djdbccli.password=test
 
-# Oracle (longer startup time ~2-3 minutes on first run)
+# Oracle (first run may take 2–3 min — image pull + container init)
 mvn test -pl database -Dtest=JdbcCliLibraryIntegrationTest -Ddatabase=oracle \
   -Dapi.version=1.52 \
   -Dvault.config=/workspaces/jdbccli/cli/src/main/resources/application.yaml \
   -Djdbccli.password=test
 ```
-
-**Default:** If `-Ddatabase` is omitted, PostgreSQL is used (backward compatible).
 
 ### Database-Specific Implementation
 

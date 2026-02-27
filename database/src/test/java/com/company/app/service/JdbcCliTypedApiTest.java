@@ -17,21 +17,22 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-import com.company.app.service.service.TypedQueryExecutorService;
+import com.company.app.service.service.TypedSqlExecutorService;
 
 /**
- * Unit tests for {@link JdbcCliTypedApi}. Mocks {@link TypedQueryExecutorService} to verify
+ * Unit tests for {@link JdbcCliTypedApi}. Mocks {@link TypedSqlExecutorService}
+ * to verify
  * delegation and the single-result vs list overload semantics.
  */
 @DisplayName("JdbcCliTypedApi")
 class JdbcCliTypedApiTest {
 
-  private TypedQueryExecutorService typedService;
+  private TypedSqlExecutorService typedService;
   private JdbcCliTypedApi api;
 
   @BeforeEach
   void setUp() {
-    typedService = mock(TypedQueryExecutorService.class);
+    typedService = mock(TypedSqlExecutorService.class);
     api = new JdbcCliTypedApi(typedService);
   }
 
@@ -44,11 +45,11 @@ class JdbcCliTypedApiTest {
   class ConstructorTests {
 
     @Test
-    @DisplayName("should reject null TypedQueryExecutorService")
+    @DisplayName("should reject null TypedSqlExecutorService")
     void shouldRejectNull() {
       assertThatNullPointerException()
           .isThrownBy(() -> new JdbcCliTypedApi(null))
-          .withMessageContaining("TypedQueryExecutorService");
+          .withMessageContaining("TypedSqlExecutorService");
     }
   }
 
@@ -61,14 +62,13 @@ class JdbcCliTypedApiTest {
   class ListOverloadTests {
 
     @Test
-    @DisplayName("should delegate to TypedQueryExecutorService and return its result")
+    @DisplayName("should delegate to TypedSqlExecutorService and return its result")
     void shouldDelegate() {
       List<String> expected = List.of("a", "b");
       when(typedService.execute(any(), eq(String.class))).thenReturn(expected);
 
-      List<String> result =
-          api.runSqlTypedApi(
-              "postgresql", "jdbc:url", "user", "SELECT 1", List.of(), String.class, null);
+      List<String> result = api.runSqlTypedApi(
+          "postgresql", "jdbc:url", "user", "SELECT 1", List.of(), String.class, null);
 
       assertThat(result).isSameAs(expected);
       verify(typedService, times(1)).execute(any(), eq(String.class));
@@ -79,9 +79,8 @@ class JdbcCliTypedApiTest {
     void shouldReturnEmptyList() {
       when(typedService.execute(any(), eq(String.class))).thenReturn(List.of());
 
-      List<String> result =
-          api.runSqlTypedApi(
-              "postgresql", "jdbc:url", "user", "SELECT 1", List.of(), String.class, null);
+      List<String> result = api.runSqlTypedApi(
+          "postgresql", "jdbc:url", "user", "SELECT 1", List.of(), String.class, null);
 
       assertThat(result).isEmpty();
     }
@@ -101,9 +100,8 @@ class JdbcCliTypedApiTest {
     void shouldRejectNullDbType() {
       assertThatNullPointerException()
           .isThrownBy(
-              () ->
-                  api.runSqlTypedApi(
-                      null, "jdbc:url", "user", "SELECT 1", List.of(), String.class, null));
+              () -> api.runSqlTypedApi(
+                  null, "jdbc:url", "user", "SELECT 1", List.of(), String.class, null));
     }
 
     @Test
@@ -111,9 +109,8 @@ class JdbcCliTypedApiTest {
     void shouldRejectNullDatabase() {
       assertThatNullPointerException()
           .isThrownBy(
-              () ->
-                  api.runSqlTypedApi(
-                      "postgresql", null, "user", "SELECT 1", List.of(), String.class, null));
+              () -> api.runSqlTypedApi(
+                  "postgresql", null, "user", "SELECT 1", List.of(), String.class, null));
     }
 
     @Test
@@ -121,9 +118,8 @@ class JdbcCliTypedApiTest {
     void shouldRejectNullUser() {
       assertThatNullPointerException()
           .isThrownBy(
-              () ->
-                  api.runSqlTypedApi(
-                      "postgresql", "jdbc:url", null, "SELECT 1", List.of(), String.class, null));
+              () -> api.runSqlTypedApi(
+                  "postgresql", "jdbc:url", null, "SELECT 1", List.of(), String.class, null));
     }
 
     @Test
@@ -131,9 +127,8 @@ class JdbcCliTypedApiTest {
     void shouldRejectNullSql() {
       assertThatNullPointerException()
           .isThrownBy(
-              () ->
-                  api.runSqlTypedApi(
-                      "postgresql", "jdbc:url", "user", null, List.of(), String.class, null));
+              () -> api.runSqlTypedApi(
+                  "postgresql", "jdbc:url", "user", null, List.of(), String.class, null));
     }
 
     @Test
@@ -141,9 +136,8 @@ class JdbcCliTypedApiTest {
     void shouldRejectNullResultClass() {
       assertThatNullPointerException()
           .isThrownBy(
-              () ->
-                  api.runSqlTypedApi(
-                      "postgresql", "jdbc:url", "user", "SELECT 1", List.of(), null, null));
+              () -> api.runSqlTypedApi(
+                  "postgresql", "jdbc:url", "user", "SELECT 1", List.of(), null, null));
     }
   }
 
@@ -160,9 +154,8 @@ class JdbcCliTypedApiTest {
     void shouldReturnSingleElement() {
       when(typedService.execute(any(), eq(String.class))).thenReturn(List.of("only"));
 
-      String result =
-          api.runSqlSingleTypedApi(
-              "postgresql", "jdbc:url", "user", "SELECT 1", List.of(), String.class, null);
+      String result = api.runSqlSingleTypedApi(
+          "postgresql", "jdbc:url", "user", "SELECT 1", List.of(), String.class, null);
 
       assertThat(result).isEqualTo("only");
     }
@@ -172,9 +165,8 @@ class JdbcCliTypedApiTest {
     void shouldReturnNullForEmptyResult() {
       when(typedService.execute(any(), eq(String.class))).thenReturn(List.of());
 
-      String result =
-          api.runSqlSingleTypedApi(
-              "postgresql", "jdbc:url", "user", "SELECT 1", List.of(), String.class, null);
+      String result = api.runSqlSingleTypedApi(
+          "postgresql", "jdbc:url", "user", "SELECT 1", List.of(), String.class, null);
 
       assertThat(result).isNull();
     }
@@ -186,9 +178,8 @@ class JdbcCliTypedApiTest {
       when(typedService.execute(any(), eq(String.class))).thenReturn(List.of("a", "b", "c"));
 
       assertThatThrownBy(
-              () ->
-                  api.runSqlSingleTypedApi(
-                      "postgresql", "jdbc:url", "user", "SELECT 1", List.of(), String.class, null))
+          () -> api.runSqlSingleTypedApi(
+              "postgresql", "jdbc:url", "user", "SELECT 1", List.of(), String.class, null))
           .isInstanceOf(IllegalStateException.class)
           .hasMessageContaining("3 rows");
     }

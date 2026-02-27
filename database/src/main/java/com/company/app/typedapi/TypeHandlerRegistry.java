@@ -1,4 +1,4 @@
-package com.company.app.service.database.typedapi;
+package com.company.app.typedapi;
 
 import java.math.BigDecimal;
 import java.sql.ResultSet;

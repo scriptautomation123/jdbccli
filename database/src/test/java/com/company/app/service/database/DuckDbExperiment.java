@@ -10,7 +10,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 
-import com.company.app.service.database.stringapi.SqlJdbcHelper;
+import com.company.app.stringapi.SqlJdbcHelper;
 import com.company.app.service.domain.model.ExecutionResult;
 
 /**

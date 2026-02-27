@@ -1,4 +1,4 @@
-package com.company.app.service.database.stringapi;
+package com.company.app.stringapi;
 
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;

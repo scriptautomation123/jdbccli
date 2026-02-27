@@ -5,7 +5,7 @@ import java.sql.SQLException;
 import java.util.Map;
 
 import com.company.app.service.auth.PasswordResolver;
-import com.company.app.service.database.ProcedureExecutor;
+import com.company.app.stringapi.ProcedureExecutor;
 import com.company.app.service.domain.model.DbRequest;
 import com.company.app.service.domain.model.ExecutionResult;
 import com.company.app.service.domain.model.ProcedureRequest;
@@ -13,8 +13,10 @@ import com.company.app.service.util.LoggingUtils;
 import com.company.app.service.util.StringUtils;
 
 /**
- * Database service implementation for executing stored procedures. Uses composition with
- * DatabaseExecutionContext instead of inheritance for better flexibility and testability.
+ * Database service implementation for executing stored procedures. Uses
+ * composition with
+ * DatabaseExecutionContext instead of inheritance for better flexibility and
+ * testability.
  */
 public final class ProcedureExecutorService {
 
@@ -47,13 +49,13 @@ public final class ProcedureExecutorService {
    * @param executionContext custom execution context
    */
   ProcedureExecutorService(final DatabaseExecutionContext executionContext) {
-    this.executionContext =
-        java.util.Objects.requireNonNull(
-            executionContext, "DatabaseExecutionContext cannot be null");
+    this.executionContext = java.util.Objects.requireNonNull(
+        executionContext, "DatabaseExecutionContext cannot be null");
   }
 
   /**
-   * Executes a procedure request with automatic password resolution and connection management.
+   * Executes a procedure request with automatic password resolution and
+   * connection management.
    *
    * @param request procedure request to execute
    * @return execution result
@@ -80,11 +82,12 @@ public final class ProcedureExecutorService {
   }
 
   /**
-   * Executes procedure-specific logic with an established connection. This is the service-specific
+   * Executes procedure-specific logic with an established connection. This is the
+   * service-specific
    * implementation that gets called by the context.
    *
    * @param request procedure request containing execution parameters
-   * @param conn database connection (managed by execution context)
+   * @param conn    database connection (managed by execution context)
    * @return execution result
    * @throws SQLException if execution fails
    */
@@ -104,26 +107,24 @@ public final class ProcedureExecutorService {
    * Executes a stored procedure with the given request and connection.
    *
    * @param request procedure request containing execution parameters
-   * @param conn database connection
+   * @param conn    database connection
    * @return execution result
    * @throws SQLException if execution fails
    */
   private ExecutionResult executeProcedure(final ProcedureRequest request, final Connection conn)
       throws SQLException {
 
-    final Map<String, Object> validationResult =
-        validateProcedureParameters(conn, request.procedure().orElse(null));
+    final Map<String, Object> validationResult = validateProcedureParameters(conn, request.procedure().orElse(null));
 
     if (!validationResult.isEmpty()) {
       return ExecutionResult.failure(1, validationResult.toString());
     }
 
-    final Map<String, Object> result =
-        executeProcedureInternal(
-            conn,
-            request.procedure().orElse(null),
-            request.input().orElse(null),
-            request.output().orElse(null));
+    final Map<String, Object> result = executeProcedureInternal(
+        conn,
+        request.procedure().orElse(null),
+        request.input().orElse(null),
+        request.output().orElse(null));
 
     return ExecutionResult.success(result);
   }
@@ -131,10 +132,10 @@ public final class ProcedureExecutorService {
   /**
    * Internal method to execute a stored procedure with validation.
    *
-   * @param conn database connection
+   * @param conn      database connection
    * @param procedure procedure name to execute
-   * @param input input parameters string
-   * @param output output parameters string
+   * @param input     input parameters string
+   * @param output    output parameters string
    * @return execution result map
    * @throws SQLException if execution fails
    */
@@ -144,8 +145,7 @@ public final class ProcedureExecutorService {
 
     LoggingUtils.logProcedureExecution(procedure, input, output);
 
-    final Map<String, Object> result =
-        PROCEDURE_EXECUTOR.executeProcedureWithStrings(conn, procedure, input, output);
+    final Map<String, Object> result = PROCEDURE_EXECUTOR.executeProcedureWithStrings(conn, procedure, input, output);
 
     LoggingUtils.logProcedureExecutionSuccess(procedure);
     return result;
@@ -154,7 +154,7 @@ public final class ProcedureExecutorService {
   /**
    * Validates procedure execution parameters.
    *
-   * @param conn database connection to validate
+   * @param conn      database connection to validate
    * @param procedure procedure name to validate
    * @return error result map if validation fails, empty map if validation passes
    */

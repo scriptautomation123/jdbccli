@@ -25,15 +25,15 @@ import com.company.app.service.domain.model.SqlRequest;
 import com.company.app.service.domain.model.VaultConfig;
 
 /**
- * Unit tests for {@link TypedQueryExecutorService} using an H2 in-memory database. Tests sealed
+ * Unit tests for {@link TypedSqlExecutorService} using an H2 in-memory database. Tests sealed
  * switch dispatch, null guards, and error propagation without requiring Testcontainers.
  */
-@DisplayName("TypedQueryExecutorService")
+@DisplayName("TypedSqlExecutorService")
 @SuppressWarnings("PMD.UseUtilityClass")
-class TypedQueryExecutorServiceTest {
+class TypedSqlExecutorServiceTest {
 
   private static Connection connection;
-  private static TypedQueryExecutorService service;
+  private static TypedSqlExecutorService service;
   private static String jdbcUrl;
 
   @BeforeAll
@@ -56,7 +56,7 @@ class TypedQueryExecutorServiceTest {
     }
 
     // H2 in-memory with default sa user requires empty password
-    service = new TypedQueryExecutorService(new PasswordResolver(() -> "", true));
+    service = new TypedSqlExecutorService(new PasswordResolver(() -> "", true));
   }
 
   @AfterAll
@@ -78,7 +78,7 @@ class TypedQueryExecutorServiceTest {
     @DisplayName("public constructor should reject null PasswordResolver")
     void shouldRejectNullPasswordResolver() {
       assertThatNullPointerException()
-          .isThrownBy(() -> new TypedQueryExecutorService((PasswordResolver) null))
+          .isThrownBy(() -> new TypedSqlExecutorService((PasswordResolver) null))
           .withMessageContaining("PasswordResolver");
     }
 
@@ -86,7 +86,7 @@ class TypedQueryExecutorServiceTest {
     @DisplayName("package-private constructor should reject null DatabaseExecutionContext")
     void shouldRejectNullContext() {
       assertThatNullPointerException()
-          .isThrownBy(() -> new TypedQueryExecutorService((DatabaseExecutionContext) null))
+          .isThrownBy(() -> new TypedSqlExecutorService((DatabaseExecutionContext) null))
           .withMessageContaining("DatabaseExecutionContext");
     }
   }

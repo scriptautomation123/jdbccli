@@ -1,4 +1,4 @@
-package com.company.app.service.database;
+package com.company.app.connection;
 
 import java.util.Locale;
 import java.util.Objects;

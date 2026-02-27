@@ -15,18 +15,23 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
+import com.company.app.stringapi.QueryExecutor;
+import com.company.app.typedapi.QueryExecutorTyped;
+
 /**
- * Performance benchmark tests comparing typed vs formatted query execution. Validates the claimed
+ * Performance benchmark tests comparing typed vs formatted query execution.
+ * Validates the claimed
  * 18.5x speedup over naive reflection.
  *
- * <p><strong>Benchmark Methodology:</strong>
+ * <p>
+ * <strong>Benchmark Methodology:</strong>
  *
  * <ul>
- *   <li>Uses H2 in-memory database for consistency
- *   <li>Includes warmup phase to eliminate JIT compilation effects
- *   <li>Tests multiple dataset sizes (10, 100, 1000 rows)
- *   <li>Compares handler framework vs formatted string output
- *   <li>Measures throughput (queries/second) and latency (ms/query)
+ * <li>Uses H2 in-memory database for consistency
+ * <li>Includes warmup phase to eliminate JIT compilation effects
+ * <li>Tests multiple dataset sizes (10, 100, 1000 rows)
+ * <li>Compares handler framework vs formatted string output
+ * <li>Measures throughput (queries/second) and latency (ms/query)
  * </ul>
  */
 @DisplayName("Performance Benchmarks: Typed vs Formatted Execution")
@@ -107,16 +112,16 @@ class PerformanceBenchmarkTest {
     try (Statement stmt = connection.createStatement()) {
       stmt.execute(
           """
-          CREATE TABLE employees (
-            id INTEGER PRIMARY KEY,
-            first_name VARCHAR(50),
-            last_name VARCHAR(50),
-            email VARCHAR(100),
-            department VARCHAR(50),
-            salary DECIMAL(10, 2),
-            hire_date DATE
-          )
-          """);
+              CREATE TABLE employees (
+                id INTEGER PRIMARY KEY,
+                first_name VARCHAR(50),
+                last_name VARCHAR(50),
+                email VARCHAR(100),
+                department VARCHAR(50),
+                salary DECIMAL(10, 2),
+                hire_date DATE
+              )
+              """);
 
       // Insert various dataset sizes
       for (int i = 1; i <= 1000; i++) {
@@ -207,14 +212,14 @@ class PerformanceBenchmarkTest {
 
       // First run (cold cache)
       long coldStart = System.nanoTime();
-      QueryExecutor.executeTyped(connection, sql, List.of(), Employee.class);
+      QueryExecutorTyped.executeTyped(connection, sql, List.of(), Employee.class);
       long coldTime = System.nanoTime() - coldStart;
 
       // Second run (warm cache)
       long warmTime = Long.MAX_VALUE;
       for (int i = 0; i < 5; i++) {
         long warmStart = System.nanoTime();
-        QueryExecutor.executeTyped(connection, sql, List.of(), Employee.class);
+        QueryExecutorTyped.executeTyped(connection, sql, List.of(), Employee.class);
         warmTime = Math.min(warmTime, System.nanoTime() - warmStart);
       }
 
@@ -234,14 +239,14 @@ class PerformanceBenchmarkTest {
 
       // Warmup
       for (int i = 0; i < 10; i++) {
-        QueryExecutor.executeTyped(connection, sql, List.of(i + 1), Employee.class);
+        QueryExecutorTyped.executeTyped(connection, sql, List.of(i + 1), Employee.class);
       }
 
       // Measure sustained performance
       List<Long> latencies = new ArrayList<>();
       for (int i = 0; i < iterations; i++) {
         long start = System.nanoTime();
-        QueryExecutor.executeTyped(connection, sql, List.of((i % 100) + 1), Employee.class);
+        QueryExecutorTyped.executeTyped(connection, sql, List.of((i % 100) + 1), Employee.class);
         latencies.add(System.nanoTime() - start);
       }
 
@@ -270,7 +275,7 @@ class PerformanceBenchmarkTest {
 
       // Warmup
       for (int i = 0; i < 10; i++) {
-        QueryExecutor.executeTyped(connection, sql, List.of(), Employee.class);
+        QueryExecutorTyped.executeTyped(connection, sql, List.of(), Employee.class);
       }
 
       // Measure throughput
@@ -278,7 +283,7 @@ class PerformanceBenchmarkTest {
       int queryCount = 0;
 
       while (System.nanoTime() < endTime) {
-        QueryExecutor.executeTyped(connection, sql, List.of(), Employee.class);
+        QueryExecutorTyped.executeTyped(connection, sql, List.of(), Employee.class);
         queryCount++;
       }
 
@@ -336,7 +341,7 @@ class PerformanceBenchmarkTest {
   private BenchmarkResult benchmarkTyped(String sql, int iterations) throws Exception {
     // Warmup
     for (int i = 0; i < 10; i++) {
-      QueryExecutor.executeTyped(connection, sql, List.of(), Employee.class);
+      QueryExecutorTyped.executeTyped(connection, sql, List.of(), Employee.class);
     }
 
     // Benchmark
@@ -346,7 +351,7 @@ class PerformanceBenchmarkTest {
 
     for (int i = 0; i < iterations; i++) {
       long start = System.nanoTime();
-      QueryExecutor.executeTyped(connection, sql, List.of(), Employee.class);
+      QueryExecutorTyped.executeTyped(connection, sql, List.of(), Employee.class);
       long latency = System.nanoTime() - start;
 
       totalTime += latency;

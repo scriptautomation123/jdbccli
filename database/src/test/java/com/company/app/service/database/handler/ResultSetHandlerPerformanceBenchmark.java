@@ -26,8 +26,8 @@ import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
 
-import com.company.app.service.database.typedapi.DefaultResultSetHandlerFactory;
-import com.company.app.service.database.typedapi.ResultSetHandler;
+import com.company.app.typedapi.DefaultResultSetHandlerFactory;
+import com.company.app.typedapi.ResultSetHandler;
 
 /**
  * JMH Benchmark comparing the optimized ResultSetHandler implementation against naive approaches.

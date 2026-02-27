@@ -9,19 +9,21 @@ import com.company.app.service.domain.model.ExecutionResult;
 import com.company.app.service.domain.model.VaultConfig;
 import com.company.app.service.service.ProcedureExecutorService;
 import com.company.app.service.service.SqlExecutorService;
-import com.company.app.service.service.TypedQueryExecutorService;
+import com.company.app.service.service.TypedSqlExecutorService;
 
 /**
  * Thin aggregator and entry point for the JDBC CLI library.
  *
- * <p>Access the two distinct API surfaces via:
+ * <p>
+ * Access the two distinct API surfaces via:
  *
  * <ul>
- *   <li>{@link #string()} — formatted string output for CLI display
- *   <li>{@link #typed()} — typed Java-object mapping for programmatic use
+ * <li>{@link #string()} — formatted string output for CLI display
+ * <li>{@link #typed()} — typed Java-object mapping for programmatic use
  * </ul>
  *
- * <p><strong>Usage example (string API):</strong>
+ * <p>
+ * <strong>Usage example (string API):</strong>
  *
  * <pre>{@code
  * JdbcCliLibrary lib = JdbcCliLibrary.withPassword("secret");
@@ -33,7 +35,8 @@ import com.company.app.service.service.TypedQueryExecutorService;
  * result.formatOutput(System.out);
  * }</pre>
  *
- * <p><strong>Usage example (typed API):</strong>
+ * <p>
+ * <strong>Usage example (typed API):</strong>
  *
  * <pre>{@code
  * JdbcCliLibrary lib = JdbcCliLibrary.withPassword("secret");
@@ -55,15 +58,15 @@ public final class JdbcCliLibrary {
 
   private JdbcCliLibrary(final PasswordResolver passwordResolver) {
     Objects.requireNonNull(passwordResolver, "PasswordResolver cannot be null");
-    this.stringApi =
-        new JdbcCliStringApi(
-            new SqlExecutorService(passwordResolver),
-            new ProcedureExecutorService(passwordResolver));
-    this.typedApi = new JdbcCliTypedApi(new TypedQueryExecutorService(passwordResolver));
+    this.stringApi = new JdbcCliStringApi(
+        new SqlExecutorService(passwordResolver),
+        new ProcedureExecutorService(passwordResolver));
+    this.typedApi = new JdbcCliTypedApi(new TypedSqlExecutorService(passwordResolver));
   }
 
   /**
-   * Creates a library instance with a custom password supplier called when vault auth is
+   * Creates a library instance with a custom password supplier called when vault
+   * auth is
    * unavailable or disabled.
    *
    * @param passwordSupplier supplier invoked when a password prompt is needed
@@ -76,7 +79,8 @@ public final class JdbcCliLibrary {
   }
 
   /**
-   * Creates a library instance with a static password. Prefer vault configuration for production.
+   * Creates a library instance with a static password. Prefer vault configuration
+   * for production.
    *
    * @param password static password
    * @return new {@code JdbcCliLibrary} instance
@@ -88,7 +92,8 @@ public final class JdbcCliLibrary {
   }
 
   /**
-   * Creates a library instance that relies solely on vault authentication. Throws at runtime if a
+   * Creates a library instance that relies solely on vault authentication. Throws
+   * at runtime if a
    * password prompt would be required.
    *
    * @return new {@code JdbcCliLibrary} instance
@@ -104,7 +109,9 @@ public final class JdbcCliLibrary {
   /**
    * Returns the string-output API surface.
    *
-   * <p>Use this for CLI display, scripts, and stored procedure execution where human-readable
+   * <p>
+   * Use this for CLI display, scripts, and stored procedure execution where
+   * human-readable
    * formatted output is required.
    *
    * @return {@link JdbcCliStringApi} instance
@@ -116,7 +123,8 @@ public final class JdbcCliLibrary {
   /**
    * Returns the typed-object mapping API surface.
    *
-   * <p>Use this for programmatic access where results are consumed as Java beans.
+   * <p>
+   * Use this for programmatic access where results are consumed as Java beans.
    *
    * @return {@link JdbcCliTypedApi} instance
    */
@@ -127,7 +135,8 @@ public final class JdbcCliLibrary {
   /**
    * Immutable fluent configuration record for string-API SQL requests.
    *
-   * <p><strong>Example:</strong>
+   * <p>
+   * <strong>Example:</strong>
    *
    * <pre>{@code
    * ExecutionResult result = JdbcCliLibrary.request("postgresql", jdbcUrl, "admin")
@@ -157,9 +166,9 @@ public final class JdbcCliLibrary {
     /**
      * Creates a minimal configuration with required connection details.
      *
-     * @param dbType database type
+     * @param dbType   database type
      * @param database JDBC URL
-     * @param user database username
+     * @param user     database username
      * @return new {@code SqlRequestConfig}
      */
     public static SqlRequestConfig of(
@@ -236,9 +245,9 @@ public final class JdbcCliLibrary {
   /**
    * Creates a new fluent {@link SqlRequestConfig} for the string API.
    *
-   * @param dbType database type
+   * @param dbType   database type
    * @param database JDBC URL
-   * @param user database username
+   * @param user     database username
    * @return new {@code SqlRequestConfig}
    */
   public static SqlRequestConfig request(

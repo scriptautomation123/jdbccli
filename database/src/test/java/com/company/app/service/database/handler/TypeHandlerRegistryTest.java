@@ -16,8 +16,8 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
-import com.company.app.service.database.typedapi.TypeHandler;
-import com.company.app.service.database.typedapi.TypeHandlerRegistry;
+import com.company.app.typedapi.TypeHandler;
+import com.company.app.typedapi.TypeHandlerRegistry;
 
 /**
  * Unit tests for TypeHandlerRegistry singleton. Tests handler registration, retrieval, and all

@@ -13,7 +13,7 @@ import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
 
-import com.company.app.service.database.typedapi.UnderscoreToCamelCase;
+import com.company.app.typedapi.UnderscoreToCamelCase;
 
 /**
  * JMH Benchmark comparing optimized string conversion against naive approaches.

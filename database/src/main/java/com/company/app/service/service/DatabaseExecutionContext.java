@@ -7,21 +7,26 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import com.company.app.connection.DatabaseConnectionManager;
 import com.company.app.service.auth.PasswordRequest;
 import com.company.app.service.auth.PasswordResolver;
-import com.company.app.service.database.DatabaseConnectionManager;
 import com.company.app.service.domain.model.DbRequest;
 import com.company.app.service.domain.model.ExecutionResult;
 import com.company.app.service.util.ExceptionUtils;
 import com.company.app.service.util.LoggingUtils;
 
 /**
- * Encapsulates the common execution context for database operations. Handles password resolution,
- * connection lifecycle, and execution orchestration. Uses composition and functional interfaces to
+ * Encapsulates the common execution context for database operations. Handles
+ * password resolution,
+ * connection lifecycle, and execution orchestration. Uses composition and
+ * functional interfaces to
  * avoid inheritance coupling.
  *
- * <p><strong>Virtual Threads:</strong> Each execution is dispatched onto a virtual thread (Project
- * Loom, Java 21). JDBC blocking I/O will unmount the carrier thread, improving throughput under
+ * <p>
+ * <strong>Virtual Threads:</strong> Each execution is dispatched onto a virtual
+ * thread (Project
+ * Loom, Java 21). JDBC blocking I/O will unmount the carrier thread, improving
+ * throughput under
  * concurrent load without requiring a large thread pool.
  */
 public final class DatabaseExecutionContext {
@@ -47,20 +52,26 @@ public final class DatabaseExecutionContext {
    * @param passwordResolver resolver for database passwords
    */
   public DatabaseExecutionContext(final PasswordResolver passwordResolver) {
-    this.passwordResolver =
-        java.util.Objects.requireNonNull(passwordResolver, "PasswordResolver cannot be null");
+    this.passwordResolver = java.util.Objects.requireNonNull(passwordResolver, "PasswordResolver cannot be null");
   }
 
   /**
-   * Executes a database operation with automatic password resolution and connection management on a
-   * virtual thread. This is the primary orchestration method that handles the full lifecycle: 1.
-   * Password resolution 2. Connection creation 3. Operation execution 4. Resource cleanup 5. Error
+   * Executes a database operation with automatic password resolution and
+   * connection management on a
+   * virtual thread. This is the primary orchestration method that handles the
+   * full lifecycle: 1.
+   * Password resolution 2. Connection creation 3. Operation execution 4. Resource
+   * cleanup 5. Error
    * handling
    *
-   * <p>The operation runs on a virtual thread so JDBC blocking I/O does not pin a platform thread.
+   * <p>
+   * The operation runs on a virtual thread so JDBC blocking I/O does not pin a
+   * platform thread.
    *
-   * @param request database request containing authentication and connection parameters
-   * @param executor functional interface that executes the actual database operation
+   * @param request  database request containing authentication and connection
+   *                 parameters
+   * @param executor functional interface that executes the actual database
+   *                 operation
    * @return execution result from the executor
    */
   public ExecutionResult executeWithPasswordResolution(
@@ -93,7 +104,7 @@ public final class DatabaseExecutionContext {
   /**
    * Executes the database operation lifecycle on the current (virtual) thread.
    *
-   * @param request database request
+   * @param request  database request
    * @param executor operation to run with the established connection
    * @return execution result
    */
@@ -152,8 +163,8 @@ public final class DatabaseExecutionContext {
         ait = null;
       }
 
-      final PasswordRequest passwordRequest =
-          new PasswordRequest(request.user(), request.database(), vaultUrl, roleId, secretId, ait);
+      final PasswordRequest passwordRequest = new PasswordRequest(request.user(), request.database(), vaultUrl, roleId,
+          secretId, ait);
 
       return passwordResolver.resolvePassword(passwordRequest);
 
@@ -178,10 +189,11 @@ public final class DatabaseExecutionContext {
   }
 
   /**
-   * Creates a database connection using request parameters. Delegates to DatabaseConnectionManager
+   * Creates a database connection using request parameters. Delegates to
+   * DatabaseConnectionManager
    * for centralized connection handling.
    *
-   * @param request database request containing connection parameters
+   * @param request  database request containing connection parameters
    * @param password resolved password for authentication
    * @return database connection
    * @throws SQLException if connection creation fails
@@ -193,7 +205,8 @@ public final class DatabaseExecutionContext {
   }
 
   /**
-   * Functional interface for database operations that execute with a connection. This allows
+   * Functional interface for database operations that execute with a connection.
+   * This allows
    * different services to provide their own execution logic without inheritance.
    */
   @FunctionalInterface

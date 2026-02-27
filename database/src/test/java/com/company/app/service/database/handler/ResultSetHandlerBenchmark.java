@@ -12,8 +12,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import com.company.app.service.database.typedapi.DefaultResultSetHandlerFactory;
-import com.company.app.service.database.typedapi.ResultSetHandler;
+import com.company.app.typedapi.DefaultResultSetHandlerFactory;
+import com.company.app.typedapi.ResultSetHandler;
 
 /**
  * Incremental benchmark demonstrating the performance improvements of the ResultSetHandler

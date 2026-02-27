@@ -116,117 +116,49 @@ mvn -pl cli spotless:apply
 ### Eclipse
 
 1. Install: EclipseGoogleStyle from Eclipse Marketplace
-
 2. Configure formatter preference
-
----
-
-## Customization
-
-If you need to customize the formatting rules, edit the `pom.xml` file:
-
-```xml
-<java>
-    <!-- Change the version number -->
-    <googleJavaFormat>
-        <version>1.21.0</version>
-        <style>GOOGLE</style>  <!-- or AOSP -->
-        <reflowLongStrings>true</reflowLongStrings>
-    </googleJavaFormat>
-
-    <!-- Modify import order as needed -->
-    <importOrder>
-        <order>java,javax,org,com,your.company</order>
-        <wildcardsLast>true</wildcardsLast>
-    </importOrder>
-
-    <!-- Remove or customize as needed -->
-    <trimTrailingWhitespace/>
-    <endWithNewline/>
-    <removeUnusedImports/>
-</java>
-```
-
-After changing the configuration, run:
-
-```bash
-mvn spotless:apply
-```
-
----
-
-## Styles Available
-
-### GOOGLE (Default)
-
-- 2-space indentation
-- 100-character line limit
-
-### AOSP
-
-- 4-space indentation
-
-Change in pom.xml:
-
-```xml
-<style>AOSP</style>
-```
 
 ---
 
 ## Troubleshooting
 
-### Issue: "MVN spotless:apply fails"
-
-**Solution:**
+### Issue: `mvn spotless:apply` fails
 
 ```bash
-# Clean and rebuild
-mvn clean install
-
-# Then apply formatting
-mvn spotless:apply
+mvn clean install && mvn spotless:apply
 ```
 
-### Issue: "Too many files formatted, want to avoid"
+### Issue: Too many files reformatted at once
 
-**Solution:** Format only modified files:
+Format only modified files:
 
 ```bash
 mvn spotless:apply -DspotlessFollow=true
 ```
 
-### Issue: "IDE formatting differs from spotless"
+### Issue: IDE formatting differs from Spotless
 
-**Solution:**
+1. Install Google Java Format extension in your IDE
+2. Run `mvn spotless:apply` to resync
+3. Confirm IDE style is set to Google (2-space indent, 100-char line limit)
 
-1. Ensure IDE has Google Java Format extension installed
-2. Run `mvn spotless:apply` to sync
-3. Check IDE settings match Google style
+### Issue: Import order keeps changing
 
-### Issue: "Import order keeps changing"
-
-**Solution:** The import order configuration in pom.xml is:
+The canonical order (defined in `pom.xml`):
 
 ```xml
 <order>java,javax,org,com</order>
 <wildcardsLast>true</wildcardsLast>
 ```
 
-This ensures imports are organized as:
-
-1. `java.*`
-2. `javax.*`
-3. `org.*`
-4. `com.*`
-5. Wildcard imports
+Order: `java.*` → `javax.*` → `org.*` → `com.*` → wildcards
 
 ---
 
 ## Additional Resources
 
 - [Google Java Style Guide](https://google.github.io/styleguide/javaguide.html)
-- [Spotless Maven Plugin Documentation](https://github.com/diffplug/spotless/tree/main/plugin-maven)
+- [Spotless Maven Plugin](https://github.com/diffplug/spotless/tree/main/plugin-maven)
 - [Google Java Format on GitHub](https://github.com/google/google-java-format)
 
 ---

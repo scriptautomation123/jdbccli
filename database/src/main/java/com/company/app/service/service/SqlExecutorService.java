@@ -11,7 +11,7 @@ import java.util.List;
 import com.company.app.service.auth.PasswordResolver;
 import com.company.app.service.database.ScriptParser;
 import com.company.app.service.database.ScriptParser.ParsedScript;
-import com.company.app.service.database.stringapi.SqlJdbcHelper;
+import com.company.app.stringapi.SqlJdbcHelper;
 import com.company.app.service.domain.model.DbRequest;
 import com.company.app.service.domain.model.ExecutionResult;
 import com.company.app.service.domain.model.ProcedureRequest;
